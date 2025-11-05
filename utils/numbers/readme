@@ -2,3 +2,8 @@ Unbiased Rounding: UnbiasedRounding.sv
   This module performs unbiased rounding (round-half-to-even) for signed fixed-point inputs. 
   It truncates the fractional bits of the input, performs rounding based on the fractional part, 
   and saturates the output if rounding causes overflow.
+
+Multi Input Adder: MultiInputAdder.sv
+  This module performs signed addition of multiple input values. The number of inputs is parameterizable. 
+  The output width is automatically extended by $clog2(NUM_INPUT) bits to prevent  overflow. 
+  Designed for use in arithmetic datapaths or DSP pipelines where accumulation of several fixed-point signals is required.
