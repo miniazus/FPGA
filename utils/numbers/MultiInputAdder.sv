@@ -34,7 +34,7 @@ module MultiInputAdder #(
 )
 (
     input  logic clk, ena,
-    input  logic signed [DATA_WIDTH_IN-1 :0]            din [NUM_INPUT],
+    input  logic signed [DATA_WIDTH_IN-1 :0]                    din [NUM_INPUT],
     output logic signed [DATA_WIDTH_IN+$clog2(NUM_INPUT)-1:0]   dout
 );
 
