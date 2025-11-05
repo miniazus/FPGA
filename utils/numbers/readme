@@ -1,12 +1,9 @@
-Signed Unbiased Rounding: SignedUnbiasedRounding.sv
-  This module performs unbiased rounding (round-half-to-even) for signed fixed-point inputs. 
-  It truncates the fractional bits of the input, performs rounding based on the fractional part, 
-  and saturates the output if rounding causes overflow.
-
-Unsigned Unbiased Rounding: UnsignedUnbiasedRounding.sv
-  This module performs unbiased rounding (round-half-to-even) for unsigned fixed-point inputs. 
-  It truncates the fractional bits of the input, performs rounding based on the fractional part, 
-  and saturates the output if rounding causes overflow.
+Unbiased Rounding: dUnbiasedRounding.sv
+  Performs unbiased rounding (round-half-to-even) for fixed-point 
+  numbers. The module truncates the lower bits of the input, applies 
+  rounding based on the truncated portion, and saturates the output 
+  if rounding causes overflow. Supports both signed and unsigned 
+  inputs, and handles fractional or integer rounding modes.
 
 Multi Input Adder: MultiInputAdder.sv
   This module performs signed addition of multiple input values. The number of inputs is parameterizable. 
