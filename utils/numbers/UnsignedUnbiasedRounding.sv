@@ -36,13 +36,35 @@ module UnsignedUnbiasedRounding #(
 );
 
     localparam int                              FRACWIDTH   = DATA_WIDTH_IN-DATA_WIDTH_OUT;
-    localparam unsigned [DATA_WIDTH_OUT-1:0]    MAXVAL      = {1'b0, {(DATA_WIDTH_OUT-1){1'b1}}};
-    localparam unsigned [DATA_WIDTH_OUT-1:0]    MINVAL      = {1'b1, {(DATA_WIDTH_OUT-1){1'b0}}};
+    localparam unsigned [DATA_WIDTH_OUT-1:0]    MAXVAL      = {(DATA_WIDTH_OUT){1'b1}};
     localparam unsigned [FRACWIDTH-1:0]         FRAC05      = 1 << (FRACWIDTH-1);
 
     generate
+        // Check parameter validity
+        if (DATA_WIDTH_IN <= 0) begin : gen_error_DATA_WIDTH_IN
+            initial begin
+                $error("DATA_WIDTH_IN must be > 0");
+            end
+        end
+
+        if (DATA_WIDTH_OUT <= 0) begin : gen_error_DATA_WIDTH_OUT
+            initial begin
+                $error("DATA_WIDTH_OUT must be > 0");
+            end
+        end
+
+        if (FRACWIDTH < 0) begin : gen_error_FRACWIDTH
+            initial begin
+                $error("DATA_WIDTH_OUT (%0d) cannot be larger than DATA_WIDTH_IN (%0d)",
+                        DATA_WIDTH_OUT, DATA_WIDTH_IN);
+            end
+        end
+
+
+        //=======================================================
         if (FRACWIDTH > 0) begin : gen_frac
             logic unsigned [DATA_WIDTH_OUT-1:0] d_rounded;
+            logic unsigned [DATA_WIDTH_OUT-1:0] temp;
 
             always_comb begin
                 // Unbiased rounding ============================
@@ -50,13 +72,14 @@ module UnsignedUnbiasedRounding #(
                 logic round_up;
 
                 d_rounded = din[DATA_WIDTH_IN-1:FRACWIDTH];
+                temp      = d_rounded;
                 round_up  = (din[FRACWIDTH-1:0] > FRAC05) ||
                             ((din[FRACWIDTH-1:0] == FRAC05) && d_rounded[0]);
                 d_rounded = d_rounded + round_up;
 
                 //Truncate ======================================
-                if (din[DATA_WIDTH_IN-1] != d_rounded[DATA_WIDTH_OUT-1])
-                    d_rounded = (din[DATA_WIDTH_IN-1] == 0) ? MAXVAL : MINVAL;
+                if (d_rounded < temp)
+                    d_rounded = MAXVAL;
             end
 
             always_ff @(posedge clk) begin

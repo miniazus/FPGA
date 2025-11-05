@@ -39,6 +39,15 @@ module MultiInputAdder #(
 );
 
     generate
+        // Check parameter validity
+        if (DATA_WIDTH_IN <= 0) begin : gen_error_DATA_WIDTH_IN
+            initial begin
+                $error("DATA_WIDTH_IN must be > 0");
+            end
+        end
+
+
+        //========================================
         if (DATA_WIDTH_IN > 0) begin : gen_Adder
             logic signed [DATA_WIDTH_IN+$clog2(NUM_INPUT)-1:0] sum;
 

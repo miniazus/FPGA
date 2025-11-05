@@ -41,6 +41,28 @@ module SignedUnbiasedRounding #(
     localparam unsigned [FRACWIDTH-1:0]         FRAC05      = 1 << (FRACWIDTH-1);
 
     generate
+        // Check parameter validity
+        if (DATA_WIDTH_IN <= 0) begin : gen_error_DATA_WIDTH_IN
+            initial begin
+                $error("DATA_WIDTH_IN must be > 0");
+            end
+        end
+
+        if (DATA_WIDTH_OUT <= 0) begin : gen_error_DATA_WIDTH_OUT
+            initial begin
+                $error("DATA_WIDTH_OUT must be > 0");
+            end
+        end
+
+        if (FRACWIDTH < 0) begin : gen_error_FRACWIDTH
+            initial begin
+                $error("DATA_WIDTH_OUT (%0d) cannot be larger than DATA_WIDTH_IN (%0d)",
+                        DATA_WIDTH_OUT, DATA_WIDTH_IN);
+            end
+        end
+
+
+        //=======================================================
         if (FRACWIDTH > 0) begin : gen_frac
             logic signed [DATA_WIDTH_OUT-1:0] d_rounded;
 
