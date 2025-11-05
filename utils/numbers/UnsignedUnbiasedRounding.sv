@@ -1,48 +1,48 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company/Author: Viet Ha Nguyen
-// Module Name   : Signed Unbiased Rounding
+// Module Name   : Unsigned Unbiased Rounding
 // Description   : This module performs unbiased rounding (round-half-to-even) 
-//                 for signed fixed-point inputs. It truncates the fractional bits 
+//                 for unsigned fixed-point inputs. It truncates the fractional bits 
 //                 of the input, performs rounding based on the fractional part, 
 //                 and saturates the output if rounding causes overflow.
 //
 // Parameters:
-//   DATA_WIDTH_IN  : Width of the signed input
-//   DATA_WIDTH_OUT : Width of the signed output
+//   DATA_WIDTH_IN  : Width of the unsigned input
+//   DATA_WIDTH_OUT : Width of the unsigned output
 //
 // Inputs:
 //   clk  : Clock signal for synchronous output
 //   ena  : Enable signal for updating output
-//   din  : Signed input of DATA_WIDTH_IN bits
+//   din  : Unsigned input of DATA_WIDTH_IN bits
 //
 // Outputs:
-//   dout : Signed output of DATA_WIDTH_OUT bits, rounded and saturated
+//   dout : Unsigned output of DATA_WIDTH_OUT bits, rounded and saturated
 //
 // Features:
 //   - Unbiased rounding: round-half-to-even for tie cases
-//   - Saturation: prevents overflow on signed output
+//   - Saturation: prevents overflow on unsigned output
 //   - Synthesizable for FPGA/ASIC
 //   - Handles pass-through when output width >= input width
 //////////////////////////////////////////////////////////////////////////////////
 
-module SignedUnbiasedRounding #(
+module UnsignedUnbiasedRounding #(
     parameter int DATA_WIDTH_IN  = 0,
     parameter int DATA_WIDTH_OUT = 0
 )
 (
     input  logic clk, ena,
-    input  logic signed [DATA_WIDTH_IN-1 :0] din,
-    output logic signed [DATA_WIDTH_OUT-1:0] dout
+    input  logic unsigned [DATA_WIDTH_IN-1 :0] din,
+    output logic unsigned [DATA_WIDTH_OUT-1:0] dout
 );
 
     localparam int                              FRACWIDTH   = DATA_WIDTH_IN-DATA_WIDTH_OUT;
-    localparam signed   [DATA_WIDTH_OUT-1:0]    MAXVAL      = {1'b0, {(DATA_WIDTH_OUT-1){1'b1}}};
-    localparam signed   [DATA_WIDTH_OUT-1:0]    MINVAL      = {1'b1, {(DATA_WIDTH_OUT-1){1'b0}}};
+    localparam unsigned [DATA_WIDTH_OUT-1:0]    MAXVAL      = {1'b0, {(DATA_WIDTH_OUT-1){1'b1}}};
+    localparam unsigned [DATA_WIDTH_OUT-1:0]    MINVAL      = {1'b1, {(DATA_WIDTH_OUT-1){1'b0}}};
     localparam unsigned [FRACWIDTH-1:0]         FRAC05      = 1 << (FRACWIDTH-1);
 
     generate
         if (FRACWIDTH > 0) begin : gen_frac
-            logic signed [DATA_WIDTH_OUT-1:0] d_rounded;
+            logic unsigned [DATA_WIDTH_OUT-1:0] d_rounded;
 
             always_comb begin
                 // Unbiased rounding ============================
