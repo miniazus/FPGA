@@ -1,6 +1,6 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company/Author: Viet Ha Nguyen
-// Module Name   : Unbiased Rounding
+// Module Name   : Signed Unbiased Rounding
 // Description   : This module performs unbiased rounding (round-half-to-even) 
 //                 for signed fixed-point inputs. It truncates the fractional bits 
 //                 of the input, performs rounding based on the fractional part, 
@@ -25,7 +25,7 @@
 //   - Handles pass-through when output width >= input width
 //////////////////////////////////////////////////////////////////////////////////
 
-module UnbiasedRounding #(
+module SignedUnbiasedRounding #(
     parameter int DATA_WIDTH_IN  = 0,
     parameter int DATA_WIDTH_OUT = 0
 )
