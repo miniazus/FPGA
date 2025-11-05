@@ -29,18 +29,18 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module MultiInputAdder #(
-    parameter int NUM_INPUT      = 2,
-    parameter int DATA_WIDTH_IN  = 0
+    parameter int NUM_INPUT = 2,
+    parameter int WIDTH_IN  = 0
 )
 (
     input  logic clk, ena,
-    input  logic signed [DATA_WIDTH_IN-1 :0]                    din [NUM_INPUT],
-    output logic signed [DATA_WIDTH_IN+$clog2(NUM_INPUT)-1:0]   dout
+    input  logic signed [WIDTH_IN-1 :0]                    din [NUM_INPUT],
+    output logic signed [WIDTH_IN+$clog2(NUM_INPUT)-1:0]   dout
 );
 
     generate
         // Check parameter validity
-        if (DATA_WIDTH_IN <= 0) begin : gen_error_DATA_WIDTH_IN
+        if (WIDTH_IN <= 0) begin : gen_error_DATA_WIDTH_IN
             initial begin
                 $error("DATA_WIDTH_IN must be > 0");
             end
@@ -48,8 +48,8 @@ module MultiInputAdder #(
 
 
         //========================================
-        if (DATA_WIDTH_IN > 0) begin : gen_Adder
-            logic signed [DATA_WIDTH_IN+$clog2(NUM_INPUT)-1:0] sum;
+        else begin : gen_Adder
+            logic signed [WIDTH_IN+$clog2(NUM_INPUT)-1:0] sum;
 
             always_comb begin
                 sum = '0;

@@ -29,33 +29,33 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module UnbiasedRounding #(
-    parameter int  DATA_WIDTH_IN  = 0,
-    parameter int  DATA_WIDTH_OUT = 0,
-    parameter bit  IS_SIGNED      = 1,      // 0 = unsigned, 1 = signed
-    parameter bit  IS_FRACTION    = 0       // 0 = integer, 1 = fractional
+    parameter int  WIDTH_IN     = 0,
+    parameter int  WIDTH_OUT    = 0,
+    parameter bit  IS_SIGNED    = 1,      // 0 = unsigned, 1 = signed
+    parameter bit  IS_FRACTION  = 0       // 0 = integer, 1 = fractional
 )
 (
     input  logic clk, ena,
-    input  logic signed [DATA_WIDTH_IN-1 :0] din,
-    output logic signed [DATA_WIDTH_OUT-1:0] dout
+    input  logic signed [WIDTH_IN-1 :0] din,
+    output logic signed [WIDTH_OUT-1:0] dout
 );
     // Difference in width between input and output
-    localparam int                              DIFFWIDTH   = DATA_WIDTH_IN-DATA_WIDTH_OUT;
+    localparam int                         DIFFWIDTH   = WIDTH_IN-WIDTH_OUT;
     // Maximum and minimum output values for saturation
-    localparam signed   [DATA_WIDTH_OUT-1:0]    MAXVAL      = {1'b0, {(DATA_WIDTH_OUT-1){1'b1}}};
-    localparam signed   [DATA_WIDTH_OUT-1:0]    MINVAL      = {1'b1, {(DATA_WIDTH_OUT-1){1'b0}}};
+    localparam signed   [WIDTH_OUT-1:0]    MAXVAL      = {1'b0, {(WIDTH_OUT-1){1'b1}}};
+    localparam signed   [WIDTH_OUT-1:0]    MINVAL      = {1'b1, {(WIDTH_OUT-1){1'b0}}};
     // Halfway value used for round-half-to-even
-    localparam unsigned [DIFFWIDTH-1:0]         FRAC05      = 1 << (DIFFWIDTH-1);
+    localparam unsigned [DIFFWIDTH-1:0]    FRAC05      = 1 << (DIFFWIDTH-1);
 
     generate
         // Check parameter validity
-        if (DATA_WIDTH_IN <= 0) begin : gen_error_DATA_WIDTH_IN
+        if (WIDTH_IN <= 0) begin : gen_error_WIDTH_IN
             initial begin
                 $error("DATA_WIDTH_IN must be > 0");
             end
         end
 
-        if (DATA_WIDTH_OUT <= 0) begin : gen_error_DATA_WIDTH_OUT
+        if (WIDTH_OUT <= 0) begin : gen_error_WIDTH_OUT
             initial begin
                 $error("DATA_WIDTH_OUT must be > 0");
             end
@@ -63,8 +63,8 @@ module UnbiasedRounding #(
 
         if (DIFFWIDTH < 0) begin : gen_error_DIFFWIDTH
             initial begin
-                $error("DATA_WIDTH_OUT (%0d) cannot be larger than DATA_WIDTH_IN (%0d)",
-                        DATA_WIDTH_OUT, DATA_WIDTH_IN);
+                $error("WIDTH_OUT (%0d) cannot be larger than WIDTH_IN (%0d)",
+                        WIDTH_OUT, WIDTH_IN);
             end
         end
 
@@ -79,14 +79,14 @@ module UnbiasedRounding #(
             end
         end
         else begin : gen_rounding
-            logic signed [DATA_WIDTH_OUT-1:0]   d_rounded;
-            logic signed [DATA_WIDTH_OUT-1:0]   d_trunc;
+            logic signed [WIDTH_OUT-1:0]   d_rounded;
+            logic signed [WIDTH_OUT-1:0]   d_trunc;
             logic                               round_up;
-            logic signed [DATA_WIDTH_OUT:0]     d_temp; // one extra bit for rounding carry
+            logic signed [WIDTH_OUT:0]     d_temp; // one extra bit for rounding carry
 
             always_comb begin
                 // Step 1: truncate to target width
-                d_trunc = din[DATA_WIDTH_IN-1:DIFFWIDTH];
+                d_trunc = din[WIDTH_IN-1:DIFFWIDTH];
 
                 // Step 2: unbiased rounding (round-half-to-even)
                 round_up  = (din[DIFFWIDTH-1:0] > FRAC05) ||
@@ -97,11 +97,11 @@ module UnbiasedRounding #(
                     // Signed rounding
                     if (IS_FRACTION == 0)
                         // Integer mode: sign-based rounding
-                        d_temp = {d_trunc[DATA_WIDTH_OUT-1], d_trunc} +
-                                (din[DATA_WIDTH_IN-1] ? -round_up : round_up);
+                        d_temp = {d_trunc[WIDTH_OUT-1], d_trunc} +
+                                (din[WIDTH_IN-1] ? -round_up : round_up);
                     else
                         // Fractional mode: unbiased symmetric rounding (same for +-)
-                        d_temp = {d_trunc[DATA_WIDTH_OUT-1], d_trunc} + round_up;
+                        d_temp = {d_trunc[WIDTH_OUT-1], d_trunc} + round_up;
                 end
                 else begin : gen_unsigned
                     // Unsigned rounding
@@ -112,20 +112,20 @@ module UnbiasedRounding #(
                 // Step 4: saturation check
                 if (IS_SIGNED) begin : gen_signed
                     // Signed saturation
-                    if (d_temp[DATA_WIDTH_OUT] != d_temp[DATA_WIDTH_OUT-1]) begin
+                    if (d_temp[WIDTH_OUT] != d_temp[WIDTH_OUT-1]) begin
                         // overflow happened
-                        d_rounded = d_temp[DATA_WIDTH_OUT-1] ? MINVAL : MAXVAL;
+                        d_rounded = d_temp[WIDTH_OUT-1] ? MINVAL : MAXVAL;
                     end else begin
                         // no overflow
-                        d_rounded = d_temp[DATA_WIDTH_OUT-1:0];
+                        d_rounded = d_temp[WIDTH_OUT-1:0];
                     end
                 end : gen_unsigned
                 else begin
                     // Unsigned saturation
-                    if (d_temp[DATA_WIDTH_OUT])
+                    if (d_temp[WIDTH_OUT])
                         d_rounded = MAXVAL;
                     else
-                        d_rounded = d_temp[DATA_WIDTH_OUT-1:0];
+                        d_rounded = d_temp[WIDTH_OUT-1:0];
                 end
             end
 
