@@ -26,6 +26,11 @@
 //   - Saturation to prevent overflow on output
 //   - Synthesizable for FPGA/ASIC
 //   - Pass-through mode when output width equals input width
+//
+// Using:
+// UnbiasedRounding #(.WIDTH_IN(...),.WIDTH_OUT(...),.IS_SIGNED(...),.IS_FRACTION(...))
+//                 (.clk(...),.ena(...),.din(...),.dout(...));
+//
 //////////////////////////////////////////////////////////////////////////////////
 
 module UnbiasedRounding #(
