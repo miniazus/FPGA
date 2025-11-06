@@ -55,7 +55,7 @@ module MultiInputAdderWithRounding #(
 
     logic signed [WIDTHTEMP-1:0]   d_tem;
     MultiInputAdder #(.NUM_INPUT(NUM_INPUT), .WIDTH_IN(WIDTH_IN))
-                    (.clk(clk), .ena(ena), .din(din), .dout(d_tem));
+                    u_adder (.clk(clk), .ena(ena), .din(din), .dout(d_tem));
 
 
     logic signed [WIDTH_OUT-1:0]   d_tem_rounded;
@@ -63,7 +63,7 @@ module MultiInputAdderWithRounding #(
                         .WIDTH_OUT(WIDTH_OUT),
                         .IS_SIGNED(IS_SIGNED),
                         .IS_FRACTION(IS_FRACTION))
-                    (.clk(clk), .ena(ena), .din(d_tem), .dout(d_tem_rounded));
+                    u_rounding (.clk(clk), .ena(ena), .din(d_tem), .dout(d_tem_rounded));
 
     assign dout = d_tem_rounded;
 

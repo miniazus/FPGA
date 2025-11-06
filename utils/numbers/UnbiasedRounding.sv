@@ -93,7 +93,7 @@ module UnbiasedRounding #(
                             ((din[DIFFWIDTH-1:0] == FRAC05) && d_trunc[0]);
 
                 // 3. Apply rounding depending on mode
-                if (IS_SIGNED) begin : gen_signed
+                if (IS_SIGNED) begin : gen_signed_rounding
                     // Signed rounding
                     if (IS_FRACTION == 0)
                         // Integer mode: sign-based rounding
@@ -103,14 +103,14 @@ module UnbiasedRounding #(
                         // Fractional mode: unbiased symmetric rounding (same for +-)
                         d_temp = {d_trunc[WIDTH_OUT-1], d_trunc} + round_up;
                 end
-                else begin : gen_unsigned
+                else begin : gen_unsigned_rounding
                     // Unsigned rounding
                     d_temp = {1'b0, d_trunc} + round_up;
                 end
 
 
                 // Step 4: saturation check
-                if (IS_SIGNED) begin : gen_signed
+                if (IS_SIGNED) begin : gen_signed_saturation
                     // Signed saturation
                     if (d_temp[WIDTH_OUT] != d_temp[WIDTH_OUT-1]) begin
                         // overflow happened
@@ -119,7 +119,7 @@ module UnbiasedRounding #(
                         // no overflow
                         d_rounded = d_temp[WIDTH_OUT-1:0];
                     end
-                end : gen_unsigned
+                end : gen_unsigned_saturation
                 else begin
                     // Unsigned saturation
                     if (d_temp[WIDTH_OUT])
