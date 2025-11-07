@@ -11,7 +11,6 @@
 //   DATA_WIDTH_IN  : Width of the input number
 //   DATA_WIDTH_OUT : Width of the output number
 //   IS_SIGNED      : Set to 1 for signed input/output, 0 for unsigned
-//   IS_FRACTION    : Set to 1 if input represents a fractional number, 0 for integer
 //
 // Inputs:
 //   clk  : Clock signal for synchronous output
@@ -28,7 +27,7 @@
 //   - Pass-through mode when output width equals input width
 //
 // Using:
-// UnbiasedRounding #(.WIDTH_IN(...),.WIDTH_OUT(...),.IS_SIGNED(...),.IS_FRACTION(...))
+// UnbiasedRounding #(.WIDTH_IN(...),.WIDTH_OUT(...),.IS_SIGNED(...))
 //                 (.clk(...),.ena(...),.din(...),.dout(...));
 //
 //////////////////////////////////////////////////////////////////////////////////
@@ -36,8 +35,7 @@
 module UnbiasedRounding #(
     parameter int  WIDTH_IN     = 0,
     parameter int  WIDTH_OUT    = 0,
-    parameter bit  IS_SIGNED    = 1,      // 0 = unsigned, 1 = signed
-    parameter bit  IS_FRACTION  = 0       // 0 = integer, 1 = fractional
+    parameter bit  IS_SIGNED    = 1      // 0 = unsigned, 1 = signed
 )
 (
     input  logic clk, ena,
@@ -100,13 +98,8 @@ module UnbiasedRounding #(
                 // 3. Apply rounding depending on mode
                 if (IS_SIGNED) begin : gen_signed_rounding
                     // Signed rounding
-                    if (IS_FRACTION == 0)
-                        // Integer mode: sign-based rounding
-                        d_temp = {d_trunc[WIDTH_OUT-1], d_trunc} +
-                                (din[WIDTH_IN-1] ? -round_up : round_up);
-                    else
-                        // Fractional mode: unbiased symmetric rounding (same for +-)
-                        d_temp = {d_trunc[WIDTH_OUT-1], d_trunc} + round_up;
+                    d_temp = {d_trunc[WIDTH_OUT-1], d_trunc} +
+                            (din[WIDTH_IN-1] ? -round_up : round_up);
                 end
                 else begin : gen_unsigned_rounding
                     // Unsigned rounding
@@ -124,8 +117,8 @@ module UnbiasedRounding #(
                         // no overflow
                         d_rounded = d_temp[WIDTH_OUT-1:0];
                     end
-                end : gen_unsigned_saturation
-                else begin
+                end
+                else begin : gen_unsigned_saturation
                     // Unsigned saturation
                     if (d_temp[WIDTH_OUT])
                         d_rounded = MAXVAL;
