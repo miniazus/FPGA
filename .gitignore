@@ -10,6 +10,10 @@
 !*.do
 !*.tcl
 
+# Permit documentation
+!README.md
+!README.txt
+
 # Allow folders if needed (optional)
 #!utils/
 #!modules/
