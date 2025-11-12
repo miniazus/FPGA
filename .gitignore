@@ -1,0 +1,15 @@
+# Permit the .gitignore itself
+!.gitignore
+
+# Ignore everything by default
+*
+
+# Allow specific file types
+!*.v
+!*.sv
+!*.do
+!*.tcl
+
+# Allow folders if needed (optional)
+#!utils/
+#!modules/

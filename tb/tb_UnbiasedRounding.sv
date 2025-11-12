@@ -2,142 +2,178 @@
 
 module tb_UnbiasedRounding;
 
-    // =============================================================
-    // Parameters
-    // =============================================================
-    localparam int  WIDTH_IN   = 32;
-    localparam int  WIDTH_OUT  = 16;
-    localparam int  DIFF       = WIDTH_IN - WIDTH_OUT;
-    localparam time CLK_PERIOD = 10ns;
-    localparam int  NUM_TESTS  = 2^32-1; // reduce for faster simulation
+    localparam int  WIDTH_IN    = 32;
+    localparam int  WIDTH_OUT   = 16;
+    localparam int  DIFF        = WIDTH_IN - WIDTH_OUT;
+    localparam time CLK_PERIOD  = 10ns;
+    //
+    localparam longint  STEP    = (64'd1 << WIDTH_IN) / 100;
 
-    // =============================================================
     // DUT signals
-    // =============================================================
     logic clk, ena;
-    logic signed [WIDTH_IN-1:0]  din;
-    logic signed [WIDTH_OUT-1:0] dout;
-
+    logic        [WIDTH_IN-1:0]  din;
+    logic signed [WIDTH_OUT-1:0] dout_signed;
+    logic        [WIDTH_OUT-1:0] dout_unsigned;
     // Control parameters
     bit IS_SIGNED;
-    bit IS_FRACTION;
 
-    // =============================================================
     // Instantiate DUT
-    // =============================================================
     UnbiasedRounding #(
-        .WIDTH_IN   (WIDTH_IN),
-        .WIDTH_OUT  (WIDTH_OUT),
-        .IS_SIGNED  (1'b1),
-        .IS_FRACTION(1'b0)
-    ) dut (
+        .WIDTH_IN(WIDTH_IN),
+        .WIDTH_OUT(WIDTH_OUT),
+        .IS_SIGNED(1'b1)
+    ) dut_signed (
         .clk(clk),
         .ena(ena),
         .din(din),
-        .dout(dout)
+        .dout(dout_signed)
     );
 
-    // =============================================================
+    UnbiasedRounding #(
+        .WIDTH_IN(WIDTH_IN),
+        .WIDTH_OUT(WIDTH_OUT),
+        .IS_SIGNED(1'b0)
+    ) dut_unsigned (
+        .clk(clk),
+        .ena(ena),
+        .din(din),
+        .dout(dout_unsigned)
+    );
+
     // Clock generation
-    // =============================================================
     always #(CLK_PERIOD/2) clk = ~clk;
 
-    // =============================================================
-    // Helper task: reference rounding using real arithmetic
-    // =============================================================
-    function automatic logic signed [WIDTH_OUT-1:0]
-        ref_round(input int din_i, input bit signed_mode);
-        real val, scaled, rounded;
-        int  result;
-        real scale = 2.0 ** DIFF;
+    // ------------------------------------------------------------
+    // Reference rounding function (bit-accurate)
+    // ------------------------------------------------------------
+    function automatic void ref_round (
+        input  bit                   is_signed,
+        input  logic [WIDTH_IN-1:0]  din,
+        output logic [WIDTH_OUT-1:0] dout);
 
-        // Convert integer input to real
-        val = din_i;
+        real scale, val, rounded_val, minval, maxval;
+        real normalized;
+        real floor_v, frac_v, added_num;
+        longint result;
+        int DIFF;
 
-        scaled = val / scale;
+        DIFF = WIDTH_IN - WIDTH_OUT;
 
-        // unbiased rounding (round-half-to-even)
-        rounded = $floor(scaled + 0.5);
-        if ((scaled - $floor(scaled)) == 0.5) begin
-            if ($floor(scaled) % 2 != 0)
-                rounded = $floor(scaled); // tie-to-even
-        end
+        // Compute scale factor (equivalent to shifting right DIFF bits)
+        scale = (DIFF > 0) ? (1.0 * (1 << DIFF)) : 1.0;
 
-        result = $rtoi(rounded); // convert back to int
+        // Convert input to real (signed or unsigned)
+        if (is_signed)
+            val = $itor($signed(din));
+        else
+            val = $itor($unsigned(din));
 
-        // clip to output range
-        if (signed_mode) begin
-            if (result >  (2**(WIDTH_OUT-1)-1))
-                result =  (2**(WIDTH_OUT-1)-1);
-            if (result < -(2**(WIDTH_OUT-1)))
-                result = -(2**(WIDTH_OUT-1));
+        // Normalize to output bit width
+        normalized = val / scale;
+
+        // --- Unbiased rounding (round-half-to-even) ---
+        floor_v = $floor(normalized);
+        frac_v  = normalized - floor_v;
+
+        if (is_signed  && val<0)
+            added_num = -1.0;
+        else
+            added_num = 1.0;
+
+        if (frac_v > 0.5)
+            rounded_val = floor_v + added_num;
+        else if (frac_v < 0.5)
+            rounded_val = floor_v;
+        else
+            // exactly halfway (x.5): round to even
+            rounded_val = (floor_v/2.0 == $floor(floor_v/2.0)) ? floor_v : floor_v + added_num;
+
+        // $display("S=%0d, din=%0d, val=%0f, scale=%0f, normalized=%0f, rounded_val=%0f",
+        //             is_signed, din, val, scale, normalized, rounded_val);
+
+
+        // --- Saturation ---
+        if (is_signed) begin
+            minval = -(1 << (WIDTH_OUT - 1));
+            maxval =  (1 << (WIDTH_OUT - 1)) - 1;
         end else begin
-            if (result > (2**WIDTH_OUT - 1))
-                result = (2**WIDTH_OUT - 1);
-            if (result < 0)
-                result = 0;
+            minval = 0;
+            maxval = (1 << WIDTH_OUT) - 1;
         end
 
-        return logic'(result);
+        if (rounded_val > maxval)
+            result = maxval;
+        else if (rounded_val < minval)
+            result = minval;
+        else
+            result = int'(rounded_val);
+
+
+        // $display("rounded_val *= scale =%0f, minval=%0f, maxval=%0f, result=%0f",
+        //             rounded_val,minval,maxval,result);
+
+        if (is_signed)
+            if (din[WIDTH_IN-1] === 1)
+                dout = result[63-:WIDTH_OUT];
+            else
+                dout = result[WIDTH_OUT-1:0];
+        else
+            dout = result[WIDTH_OUT-1:0];
+
     endfunction
 
-    // =============================================================
+
+    // ------------------------------------------------------------
     // Main test
-    // =============================================================
+    // ------------------------------------------------------------
+
     initial begin
+        logic [WIDTH_OUT-1:0] expected;
+        logic [WIDTH_OUT-1:0] dout;
+        //logic [WIDTH_IN-1:0]  din;
+        int i;  // loop counter
+        int s;  // mode selector
+
         clk = 0;
         ena = 1;
-        din = 0;
 
         $display("==============================================");
-        $display(" UnbiasedRounding 32->16 Self-Check Testbench ");
+        $display(" Testing UnbiasedRounding 32->16 bit ");
         $display("==============================================");
 
-        // Sweep through all parameter combinations
-        foreach ({IS_SIGNED, IS_FRACTION}) begin end // to define outside loop
+        for (din=1; din!=0; din++) begin
+            // Wait for DUT output
+            @(posedge clk);
+            @(posedge clk);
 
-        for (int s = 0; s < 2; s++) begin
-            IS_SIGNED = s;
-            for (int f = 0; f < 2; f++) begin
-                IS_FRACTION = f;
-                dut.IS_SIGNED    = IS_SIGNED;
-                dut.IS_FRACTION  = IS_FRACTION;
-
-                $display("\nMode: IS_SIGNED=%0d, IS_FRACTION=%0d", IS_SIGNED, IS_FRACTION);
-
-                for (int i = 0; i < NUM_TESTS; i++) begin
-                    // Generate random test input
-                    if (IS_SIGNED)
-                        din = $urandom_range(-(1 << (WIDTH_IN-1)), (1 << (WIDTH_IN-1))-1);
-                    else
-                        din = $urandom();
-
-                    // Apply input and wait for output
-                    @(posedge clk);
-                    @(posedge clk);
-
-                    // Compute reference result
-                    logic signed [WIDTH_OUT-1:0] ref_out;
-                    ref_out = ref_round(din, IS_SIGNED, IS_FRACTION);
-
-                    // Compare DUT vs reference
-                    if (dout !== ref_out) begin
-                        $error("Mismatch detected! Mode(S=%0d,F=%0d) din=%0d (0x%h) -> DUT=%0d (0x%h) Expected=%0d (0x%h)",
-                               IS_SIGNED, IS_FRACTION, din, din, dout, dout, ref_out, ref_out);
-                        $fatal;
-                    end
-
-                    // Show a few samples
-                    if (i < 5)
-                        $display("din=%0d dout=%0d ref=%0d", din, dout, ref_out);
-                end
-                $display("Mode (S=%0d,F=%0d) PASSED ✓", IS_SIGNED, IS_FRACTION);
+            // Compute expected output --- UNSIGNED CASE
+            ref_round(0,din,expected);
+            // Compare
+            if (dout_unsigned !== expected) begin
+                $error("Mismatch! Mode=Unsigned din=%0d dout=%0d expected=%0d",
+                        din, dout_unsigned, expected);
+                $fatal;
             end
+
+            // Compute expected output --- SIGNED CASE
+            ref_round(1,din,expected);
+            // Compare
+            if (dout_signed !== expected) begin
+                $error("Mismatch! Mode=Signed din=%0d dout=%0d expected=%0d",
+                        din, dout_signed, expected);
+                $fatal;
+            end
+
+            // Print progress every 1%
+            if ((din % STEP)==0)
+                $display("Progress: %0d%% (%0d / %0d)",
+                        din/STEP,
+                        longint'(din),
+                        longint'(64'd1 << WIDTH_IN));
         end
 
-        $display("\n==============================================");
-        $display(" All tests PASSED! ");
-        $display("==============================================");
+        $display("PASSED");
+        $display("\nAll tests passed!");
         $finish;
     end
 

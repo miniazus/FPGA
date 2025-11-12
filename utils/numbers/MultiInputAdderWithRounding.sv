@@ -61,8 +61,7 @@ module MultiInputAdderWithRounding #(
     logic signed [WIDTH_OUT-1:0]   d_tem_rounded;
     UnbiasedRounding #( .WIDTH_IN(WIDTHTEMP),
                         .WIDTH_OUT(WIDTH_OUT),
-                        .IS_SIGNED(IS_SIGNED),
-                        .IS_FRACTION(IS_FRACTION))
+                        .IS_SIGNED(IS_SIGNED))
                     u_rounding (.clk(clk), .ena(ena), .din(d_tem), .dout(d_tem_rounded));
 
     assign dout = d_tem_rounded;
