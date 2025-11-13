@@ -45,8 +45,9 @@ module UnbiasedRounding #(
     // Difference in width between input and output
     localparam int                         DIFFWIDTH   = WIDTH_IN-WIDTH_OUT;
     // Maximum and minimum output values for saturation
-    localparam signed   [WIDTH_OUT-1:0]    MAXVAL      = {1'b0, {(WIDTH_OUT-1){1'b1}}};
-    localparam signed   [WIDTH_OUT-1:0]    MINVAL      = {1'b1, {(WIDTH_OUT-1){1'b0}}};
+    localparam signed   [WIDTH_OUT-1:0]    MAXVALunsigned = {(WIDTH_OUT){1'b1}};
+    localparam signed   [WIDTH_OUT-1:0]    MAXVALsigned   = {1'b0, {(WIDTH_OUT-1){1'b1}}};
+    localparam signed   [WIDTH_OUT-1:0]    MINVALsigned   = {1'b1, {(WIDTH_OUT-1){1'b0}}};
     // Halfway value used for round-half-to-even
     localparam unsigned [DIFFWIDTH-1:0]    FRAC05      = 1 << (DIFFWIDTH-1);
 
@@ -84,7 +85,7 @@ module UnbiasedRounding #(
         else begin : gen_rounding
             logic signed [WIDTH_OUT-1:0]   d_rounded;
             logic signed [WIDTH_OUT-1:0]   d_trunc;
-            logic                               round_up;
+            logic                          round_up;
             logic signed [WIDTH_OUT:0]     d_temp; // one extra bit for rounding carry
 
             always_comb begin
@@ -112,7 +113,7 @@ module UnbiasedRounding #(
                     // Signed saturation
                     if (d_temp[WIDTH_OUT] != d_temp[WIDTH_OUT-1]) begin
                         // overflow happened
-                        d_rounded = d_temp[WIDTH_OUT-1] ? MINVAL : MAXVAL;
+                        d_rounded = din[WIDTH_IN-1] ? MINVALsigned : MAXVALsigned;
                     end else begin
                         // no overflow
                         d_rounded = d_temp[WIDTH_OUT-1:0];
@@ -121,7 +122,7 @@ module UnbiasedRounding #(
                 else begin : gen_unsigned_saturation
                     // Unsigned saturation
                     if (d_temp[WIDTH_OUT])
-                        d_rounded = MAXVAL;
+                        d_rounded = MAXVALunsigned;
                     else
                         d_rounded = d_temp[WIDTH_OUT-1:0];
                 end

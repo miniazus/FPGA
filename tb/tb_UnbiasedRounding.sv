@@ -109,16 +109,10 @@ module tb_UnbiasedRounding;
             result = int'(rounded_val);
 
 
-        // $display("rounded_val *= scale =%0f, minval=%0f, maxval=%0f, result=%0f",
-        //             rounded_val,minval,maxval,result);
+        dout = result[WIDTH_OUT-1:0];
 
-        if (is_signed)
-            if (din[WIDTH_IN-1] === 1)
-                dout = result[63-:WIDTH_OUT];
-            else
-                dout = result[WIDTH_OUT-1:0];
-        else
-            dout = result[WIDTH_OUT-1:0];
+        // $display("rounded_val *= scale =%0f, minval=%0f, maxval=%0f, result=%0f, dout=%0f",
+        //             rounded_val,minval,maxval,result,dout);
 
     endfunction
 
@@ -141,7 +135,7 @@ module tb_UnbiasedRounding;
         $display(" Testing UnbiasedRounding 32->16 bit ");
         $display("==============================================");
 
-        for (din=1; din!=0; din++) begin
+        for (din=4294934528; din!=0; din++) begin
             // Wait for DUT output
             @(posedge clk);
             @(posedge clk);
