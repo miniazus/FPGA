@@ -145,6 +145,7 @@ module tb_MultiInputAdder;
         return $sformatf("%02d:%02d:%02d", hh, mm, ss);
     endfunction
 
+
     //Convert longint to string with commas every thousand
     function automatic string longint_with_commas (longint value);
         string s, out;
