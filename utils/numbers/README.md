@@ -10,12 +10,3 @@ Multi Input Adder: MultiInputAdder.sv
   The output width is automatically extended by $clog2(NUM_INPUT) bits to prevent  overflow. 
   Designed for use in arithmetic datapaths or DSP pipelines where accumulation of several fixed-point signals is required.
 
-Multi Input Adder With Rounding: MultiInputAdderWithRounding.sv
-  This module performs addition of multiple signed or unsigned 
-  input values and applies unbiased rounding (round-half-to-even) 
-  to the result. The output can be truncated to a smaller width 
-  with optional saturation. Fractional inputs can be handled 
-  correctly with symmetric rounding.
-
-
-
