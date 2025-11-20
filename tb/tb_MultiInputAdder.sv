@@ -3,9 +3,9 @@
 module tb_MultiInputAdder;
     localparam longint NumTestCase = 1_00_000_000;
 
-    localparam int NUMINPUT = 21;
+    localparam int NUMINPUT = 45;
     localparam int WIDTHIN  = 16;
-    localparam int OUTDELAY = 3;
+    localparam int OUTDELAY = 5;
 
     localparam time CLKPERIOD  = 10ns;
 

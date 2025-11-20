@@ -1,10 +1,11 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company/Author: Viet Ha Nguyen
 // Module Name   : UnbiasedRounding
-// Description   : Performs unbiased rounding (round-half-to-even) for fixed-point 
-//                 numbers. The module truncates the lower bits of the input, applies 
-//                 rounding based on the truncated portion, and saturates the output 
-//                 if rounding causes overflow. Supports both signed and unsigned 
+// Date          : November 19, 2025
+// Description   : Performs unbiased rounding (round-half-to-even) for fixed-point
+//                 numbers. The module truncates the lower bits of the input, applies
+//                 rounding based on the truncated portion, and saturates the output
+//                 if rounding causes overflow. Supports both signed and unsigned
 //                 inputs, and handles fractional or integer rounding modes.
 //
 // Parameters:

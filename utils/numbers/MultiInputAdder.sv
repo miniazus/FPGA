@@ -1,14 +1,15 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company/Author: Viet Ha Nguyen
 // Module Name   : MultiInputAdder_Pipeline
-// Description   : This module performs the summation of multiple input values 
+// Date          : November 19, 2025
+// Description   : This module performs the summation of multiple input values
 //                 using a balanced binary adder tree.
 //
 //                 Key capabilities:
-//                 1. Pipelining: The module automatically inserts pipeline 
-//                    registers between adder stages to meet a target latency 
-//                    (OUTPUT_DELAY). 
-//                 2. Precision: The output width is automatically extended by 
+//                 1. Pipelining: The module automatically inserts pipeline
+//                    registers between adder stages to meet a target latency
+//                    (OUTPUT_DELAY).
+//                 2. Precision: The output width is automatically extended by
 //                    $clog2(NUM_INPUT) bits to guarantee no overflow.
 //                 3. Flexibility: Supports both signed and unsigned arithmetic
 //                    and handles arbitrary input counts (even or odd).
@@ -19,7 +20,7 @@
 //   IS_SIGNED    : 1 = Signed arithmetic (2's complement), 0 = Unsigned.
 //   OUTPUT_DELAY : Target latency in clock cycles.
 //                  - If 0: Purely combinational (0 clock cycle latency).
-//                  - If >0: Pipelined with registers inserted to distribute 
+//                  - If >0: Pipelined with registers inserted to distribute
 //                    logic delay across 'OUTPUT_DELAY' clock cycles.
 //
 // Inputs:
@@ -34,7 +35,7 @@
 //   - Configurable Pipeline Depth (Latency)
 //   - Balanced Adder Tree structure for minimized logic delay
 //   - Automatic Sign Extension / Zero Extension based on IS_SIGNED
-//   - Efficient Logic Grouping: Automatically groups adder levels to fit 
+//   - Efficient Logic Grouping: Automatically groups adder levels to fit
 //     within the requested clock cycles
 //   - No Overflow: Output width grows dynamically
 //
