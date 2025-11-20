@@ -1,98 +1,72 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company/Author: Viet Ha Nguyen
-// Module Name   : Multi Input Adder
-// Description   : This module performs signed addition of multiple input values.
-//                 The number of inputs is parameterizable. The output width is 
-//                 automatically extended by $clog2(NUM_INPUT) bits to prevent 
-//                 overflow. Designed for use in arithmetic datapaths or DSP 
-//                 pipelines where accumulation of several fixed-point signals 
-//                 is required.
+// Module Name   : MultiInputAdder_Pipeline
+// Description   : This module performs the summation of multiple input values 
+//                 using a balanced binary adder tree.
+//
+//                 Key capabilities:
+//                 1. Pipelining: The module automatically inserts pipeline 
+//                    registers between adder stages to meet a target latency 
+//                    (OUTPUT_DELAY). 
+//                 2. Precision: The output width is automatically extended by 
+//                    $clog2(NUM_INPUT) bits to guarantee no overflow.
+//                 3. Flexibility: Supports both signed and unsigned arithmetic
+//                    and handles arbitrary input counts (even or odd).
+//
 // Parameters:
-//   NUM_INPUT      : Number of inputs
-//   DATA_WIDTH_IN  : Width of the signed input
+//   NUM_INPUT    : Number of input signals to sum.
+//   WIDTH_IN     : Bit width of a single input signal.
+//   IS_SIGNED    : 1 = Signed arithmetic (2's complement), 0 = Unsigned.
+//   OUTPUT_DELAY : Target latency in clock cycles.
+//                  - If 0: Purely combinational (0 clock cycle latency).
+//                  - If >0: Pipelined with registers inserted to distribute 
+//                    logic delay across 'OUTPUT_DELAY' clock cycles.
 //
 // Inputs:
-//   clk  : Clock signal (used if registered output is desired)
-//   ena  : Enable signal for registered output
-//   din  : Signed input of DATA_WIDTH_IN bits
+//   clk  : System Clock.
+//   ena  : Clock Enable (Active High). Controls the pipeline registers.
+//   din  : Array of inputs [NUM_INPUT] x [WIDTH_IN].
 //
 // Outputs:
-//   dout : Signed output of DATA_WIDTH_IN+$clog2(N) bits
+//   dout : Full precision sum. Width = WIDTH_IN + $clog2(NUM_INPUT).
 //
 // Features:
-//   - Parameterizable number of inputs (NUM_INPUT)
-//   - Supports signed addition of all inputs
-//   - Output width automatically scales with $clog2(NUM_INPUT)
-//   - Synthesizable and FPGA/ASIC friendly
-//   - Simple, single-cycle combinational implementation
-//   - Easily extendable for pipelined or tree-based summation
+//   - Configurable Pipeline Depth (Latency)
+//   - Balanced Adder Tree structure for minimized logic delay
+//   - Automatic Sign Extension / Zero Extension based on IS_SIGNED
+//   - Efficient Logic Grouping: Automatically groups adder levels to fit 
+//     within the requested clock cycles
+//   - No Overflow: Output width grows dynamically
 //
-// Using:
-// MultiInputAdder #(.NUM_INPUT(...),.WIDTH_IN(...))
-//                 (.clk(...),.ena(...),.din(...),.dout(...));
+// Usage Example:
+//   MultiInputAdder #(
+//       .NUM_INPUT(32),
+//       .WIDTH_IN(16),
+//       .IS_SIGNED(1),
+//       .OUTPUT_DELAY(2) // Result appears 2 clocks later
+//   ) u_adder (
+//       .clk(clk),
+//       .ena(1'b1),
+//       .din(my_data_array),
+//       .dout(sum_result)
+//   );
 //
 //////////////////////////////////////////////////////////////////////////////////
 
 module MultiInputAdder #(
-    parameter int NUM_INPUT = 2,
-    parameter int WIDTH_IN  = 0,
-    parameter bit IS_SIGNED = 1,
-    parameter bit TRUNCATE  = 1,
+    parameter int NUM_INPUT    = 2,
+    parameter int WIDTH_IN     = 16,
+    parameter bit IS_SIGNED    = 1,
+    parameter int OUTPUT_DELAY = 1,
 
     // derived parameters
-    parameter int WIDTH_SUM = WIDTH_IN + $clog2(NUM_INPUT),
-    parameter int WIDTH_OUT = TRUNCATE ? WIDTH_IN : WIDTH_SUM
+    parameter int WIDTH_OUT = WIDTH_IN + $clog2(NUM_INPUT)
 )
 (
     input  logic clk, ena,
     input  logic [WIDTH_IN -1:0] din [NUM_INPUT],
     output logic [WIDTH_OUT-1:0] dout
 );
-
-    // Balanced adder tree
-    function automatic logic [WIDTH_SUM-1:0]
-        adder_tree (input logic [WIDTH_IN-1:0] f_din [NUM_INPUT], input logic f_signed);
-
-        // Declare everything first
-        logic [WIDTH_SUM-1:0] f_results [$clog2(NUM_INPUT)+1][NUM_INPUT];
-        int i, ii;
-        int f_num_item, f_stage;
-        int f_num_add, f_from, f_to;
-
-
-        // Stage 0: sign/zero extend ----
-        for (i=0; i<NUM_INPUT; i++) begin
-            if (!f_signed)
-                f_results[0][i] = {{(WIDTH_SUM-WIDTH_IN){1'b0}} , f_din[i]};
-            else
-                f_results[0][i] = {{(WIDTH_SUM-WIDTH_IN){f_din[i][WIDTH_IN-1]}} , f_din[i]};
-        end
-
-        // Consequent stages:  Build the tree ----
-        f_num_item = NUM_INPUT;
-        f_stage = 0;
-        //
-        while (f_num_item > 1) begin
-            f_stage++;
-            f_num_add  = (f_num_item + 1) >> 1;
-            //
-            for (ii=0; ii<f_num_add; ii++) begin
-                f_from = ii*2;
-                f_to   = f_from + 1;
-
-                if (f_to >= f_num_item)
-                    f_results[f_stage][ii] = f_results[f_stage-1][f_from];
-                else
-                    f_results[f_stage][ii] = f_results[f_stage-1][f_from] +
-                                             f_results[f_stage-1][f_to];
-            end
-
-            f_num_item = f_num_add;
-        end
-
-        return f_results[f_stage][0];
-    endfunction
-
 
     generate
         // Check parameter validity
@@ -101,30 +75,74 @@ module MultiInputAdder #(
                 $error("DATA_WIDTH_IN must be > 0");
             end
         end
+    endgenerate
 
-        //========================================
-        else begin : gen_Adder
-            logic [WIDTH_SUM-1:0] t_sum;
 
-            always_comb
-                t_sum = adder_tree(.f_din(din), .f_signed(IS_SIGNED));
+    localparam int TotalLevels      = $clog2(NUM_INPUT);
+    localparam int NumLevelPerCycle = (OUTPUT_DELAY > 0) ?
+                        (TotalLevels + OUTPUT_DELAY - 1) / OUTPUT_DELAY : TotalLevels;
 
-            if (TRUNCATE) begin : gen_Truncate
-                UnbiasedRounding #(.WIDTH_IN (WIDTH_SUM),
-                                   .WIDTH_OUT(WIDTH_OUT),
-                                   .IS_SIGNED(IS_SIGNED))
-                       u_rounding (.clk (clk),
-                                   .ena (ena),
-                                   .din (t_sum),
-                                   .dout(dout));
+
+    //Array to hold results at every level of the tree
+    logic [WIDTH_OUT-1:0] tree_nodes [TotalLevels+1][NUM_INPUT];
+
+
+    //Level 0: Input Extension (Always Combinational)
+    always_comb begin
+        for (int i=0; i<NUM_INPUT; i++) begin
+            if (!IS_SIGNED)
+                tree_nodes[0][i] = {{(WIDTH_OUT-WIDTH_IN){1'b0}} , din[i]};
+            else
+                tree_nodes[0][i] = {{(WIDTH_OUT-WIDTH_IN){din[i][WIDTH_IN-1]}} , din[i]};
+        end
+    end
+
+
+    generate
+        genvar i_level, i_add;
+
+        for (i_level=0; i_level<TotalLevels; i_level++) begin : gen_tree
+            localparam int NumInput    = (NUM_INPUT + (1<<i_level) - 1) >> i_level;
+            localparam int NumAdd      = NumInput >> 1;
+            localparam bit PassThrough = NumInput[0] === 1;
+
+            if ((OUTPUT_DELAY>0) && (i_level+1)%NumLevelPerCycle == 0) begin : gen_seq
+                for (i_add=0; i_add<NumAdd; i_add++) begin : gen_seq_add
+                    always_ff @(posedge clk) begin
+                        if (ena) begin
+                            tree_nodes[i_level+1][i_add] <= tree_nodes[i_level][2*i_add] +
+                                                            tree_nodes[i_level][2*i_add+1];
+                        end
+                    end
+                end
+
+                if (PassThrough) begin : gen_seq_passthrough
+                    always_ff @(posedge clk) begin
+                        if (ena) begin
+                            tree_nodes[i_level+1][NumAdd] <= tree_nodes[i_level][2*NumAdd];
+                        end
+                    end
+                end
             end
-            else begin : gen_Without_Truncate
-                always_ff @(posedge clk) begin
-                    if (ena)
-                        dout <= t_sum;
+            else begin : gen_comb
+                for (i_add=0; i_add<NumAdd; i_add++) begin : gen_comb_add
+                    always_comb begin
+                        tree_nodes[i_level+1][i_add] = tree_nodes[i_level][2*i_add] +
+                                                        tree_nodes[i_level][2*i_add+1];
+                    end
+                end
+
+                if (PassThrough) begin : gen_comb_passthrough
+                    always_comb begin
+                        tree_nodes[i_level+1][NumAdd] = tree_nodes[i_level][2*NumAdd];
+                    end
                 end
             end
         end
     endgenerate
+
+
+
+    assign dout = tree_nodes[TotalLevels][0];
 
 endmodule

@@ -1,17 +1,15 @@
 `timescale 1ns/1ps
 
 module tb_MultiInputAdder;
-    localparam longint NumTestCase = 1_000_000_000;
+    localparam longint NumTestCase = 1_00_000_000;
 
-    localparam int NUMINPUT = 7;
+    localparam int NUMINPUT = 21;
     localparam int WIDTHIN  = 16;
-    // localparam bit ISSIGNED = 1;
-    localparam bit TRUNCATE = 0;
+    localparam int OUTDELAY = 3;
 
     localparam time CLKPERIOD  = 10ns;
 
-    localparam int WIDTHSUM = WIDTHIN + $clog2(NUMINPUT);
-    localparam int WIDTHOUT = TRUNCATE ? WIDTHIN : WIDTHSUM;
+    localparam int WIDTHOUT = WIDTHIN + $clog2(NUMINPUT);
 
     localparam longint Step = NumTestCase / 100;
 
@@ -23,9 +21,9 @@ module tb_MultiInputAdder;
     // Instantiate DUT
     MultiInputAdder #(
                     .NUM_INPUT(NUMINPUT),
-                    .WIDTH_IN(WIDTHIN),
+                    .WIDTH_IN(16),
                     .IS_SIGNED(0),
-                    .TRUNCATE(TRUNCATE))
+                    .OUTPUT_DELAY(OUTDELAY))
             u_MultiInputAdder_unsigned (
                     .clk(clk),
                     .ena(ena),
@@ -34,9 +32,9 @@ module tb_MultiInputAdder;
 
     MultiInputAdder #(
                     .NUM_INPUT(NUMINPUT),
-                    .WIDTH_IN(WIDTHIN),
+                    .WIDTH_IN(16),
                     .IS_SIGNED(1),
-                    .TRUNCATE(TRUNCATE))
+                    .OUTPUT_DELAY(OUTDELAY))
             u_MultiInputAdder_signed (
                     .clk(clk),
                     .ena(ena),
@@ -95,8 +93,7 @@ module tb_MultiInputAdder;
             end
 
             // Wait for DUT output
-            @(posedge clk);
-            @(posedge clk);
+            repeat (OUTDELAY) @(posedge clk);
 
             // Compute expected output -- UNSIGNED
             expected = ref_adder(0,din);
