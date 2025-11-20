@@ -2,16 +2,16 @@
 // Support by: Google Gemini
 // Module Name   : DelayLine
 // Date          : November 19, 2025
-// Description   : A universal, parameterizable signal delay block implementing 
+// Description   : A universal, parameterizable signal delay block implementing
 //                 a z^-n transfer function.
 //
 //                 Key capabilities:
-//                 1. Universal Mode: Automatically generates either a 
-//                    combinational wire (Mode 1) or a sequential shift register 
+//                 1. Universal Mode: Automatically generates either a
+//                    combinational wire (Mode 1) or a sequential shift register
 //                    (Mode 2) based on the DELAY parameter.
-//                 2. Pipeline Control: Includes an enable signal to pause/hold 
+//                 2. Pipeline Control: Includes an enable signal to pause/hold
 //                    the delay line contents.
-//                 3. Synthesis Optimized: Uses efficient shift-register inference 
+//                 3. Synthesis Optimized: Uses efficient shift-register inference
 //                    compatible with FPGA logic elements (LEs/ALMs).
 //
 // Parameters:
@@ -85,5 +85,4 @@ module DelayLine #(
             assign dout = shift_reg[DELAY-1];
         end
     endgenerate
-
 endmodule

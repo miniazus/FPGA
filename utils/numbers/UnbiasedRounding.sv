@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company/Author: Viet Ha Nguyen
 // Module Name   : UnbiasedRounding
-// Date          : November 19, 2025
+// Date          : November 10, 2025
 // Description   : Performs unbiased rounding (round-half-to-even) for fixed-point
 //                 numbers. The module truncates the lower bits of the input, applies
 //                 rounding based on the truncated portion, and saturates the output
