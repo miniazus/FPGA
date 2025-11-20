@@ -34,8 +34,8 @@
 //////////////////////////////////////////////////////////////////////////////////
 
 module UnbiasedRounding #(
-    parameter int  WIDTH_IN     = 0,
-    parameter int  WIDTH_OUT    = 0,
+    parameter int  WIDTH_IN     = 19,
+    parameter int  WIDTH_OUT    = 16,
     parameter bit  IS_SIGNED    = 1      // 0 = unsigned, 1 = signed
 )
 (
