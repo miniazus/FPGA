@@ -58,9 +58,9 @@ module UnbiasedRounding_v2 #(
 
     generate
         if (IS_SIGNED)
-            assign din_t = din <<< (WIDTH_IN_MAX - width_in);
+            assign din_t = $signed(din)   <<< (WIDTH_IN_MAX - width_in);
         else
-            assign din_t = din <<  (WIDTH_IN_MAX - width_in);
+            assign din_t = $unsigned(din) <<  (WIDTH_IN_MAX - width_in);
     endgenerate
 
 
