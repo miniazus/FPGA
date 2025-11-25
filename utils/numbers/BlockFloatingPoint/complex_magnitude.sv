@@ -1,3 +1,7 @@
+// $$|Mag| = \sqrt{I^2 + Q^2}$$
+// Calculating a square root in hardware requires iterative algorithms (like CORDIC),
+// which are slow and expensive. We need a linear approximation.
+// The "Alpha Max + Beta Min" Theory:
 // $$|Mag| \approx \alpha \cdot \text{Max}(|I|,|Q|) + \beta \cdot \text{Min}(|I|,|Q|)$$
 // $\alpha = 1$:   multiplying by 1 is just a wire.
 // $\beta  = 0.5$: multiplying by $0.5$ is just a Right Shift by 1 bit (>> 1).
@@ -20,10 +24,13 @@ module complex_magnitude #(
             // CASE: SIGNED INPUTS
             // Check MSB or use $signed() to determine if negative.
             // Note: We cast to signed for the check, but the result is stored as unsigned bits.
-            // Handling -Max (e.g., -32768) -> +32768 works because the bit pattern 
+            // Handling -Max (e.g., -32768) -> +32768 works because the bit pattern
             // 1000... is -Max in signed but +Max+1 in unsigned.
             abs_i = ($signed(i_in) < 0) ? -($signed(i_in)) : $signed(i_in);
             abs_q = ($signed(q_in) < 0) ? -($signed(q_in)) : $signed(q_in);
+
+            abs_i = i_in[WIDTH-1] ? ~i_in+1 : i_in;
+
         end else begin
             // CASE: UNSIGNED INPUTS
             // Pass through directly
@@ -51,7 +58,7 @@ module complex_magnitude #(
     // We use one extra bit for the sum to detect overflow safely
     logic [WIDTH:0] sum_temp;
 
-    // Formula: Max + (Min / 2)
+    // Formula: Max + (Min / 2) (Here, \alpha = 1, \beta  = 0.5)
     assign sum_temp = max_val + (min_val >> 1);
 
     // 4. Final Saturation
