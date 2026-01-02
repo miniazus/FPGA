@@ -11,6 +11,7 @@
 
 
 **Unbiased Rounding with Input Precision setting:** UnbiasedRounding_wCurrentPrecision.sv
+
   Performs unbiased rounding (round-half-to-even) for fixed-point 
   numbers. The module truncates the lower bits of the input, applies 
   rounding based on the truncated portion, and saturates the output 
@@ -22,6 +23,7 @@
 
 
 **Multi Input Adder:** MultiInputAdder.sv
+
   This module performs the summation of multiple input values 
   using a balanced binary adder tree.  Key capabilities: Pipelining: 
   The module automatically inserts pipeline  registers between adder
@@ -32,6 +34,7 @@
 
 
 **MultiInputAdder with Input Enable setting:** MultiInputAdder_wInputEnable.sv
+
   This module performs the summation of multiple input values 
   using a balanced binary adder tree.  Key capabilities: Pipelining: 
   The module automatically inserts pipeline  registers between adder
@@ -42,6 +45,7 @@
 
 
 **A One-Shot Pulse Generator / Startup Sequencer:** PulseSignal.sv
+
   This module waits for a specified number of clock cycles ('DELAY')
   after reset is released, then asserts the output 'dout'.
   It is commonly used to sequence the startup of multiple modules
@@ -52,5 +56,6 @@
 
 
 **Delay Line:** DelayLine.sv
+
   A universal, parameterizable signal delay block implementing
   a z^-n transfer function.
