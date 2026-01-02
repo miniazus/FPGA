@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////////////////
-// Support by: Google Gemini
+// Company/Author: Viet Ha Nguyen
 // Module Name   : DelayLine
 // Date          : November 19, 2025
 // Description   : A universal, parameterizable signal delay block implementing

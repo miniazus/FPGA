@@ -1,60 +1,63 @@
 //////////////////////////////////////////////////////////////////////////////////
 // Company/Author: Viet Ha Nguyen
-// Module Name   : MultiInputAdder_Pipeline
+// Module Name   : MultiInputAdder_wInputEnable
 // Date          : November 19, 2025
-// Description   : This module performs the summation of multiple input values
-//                 using a balanced binary adder tree.
+// Description   : A pipelined, balanced binary adder tree for summing multiple
+//                 inputs with dynamic masking control.
 //
 //                 Key capabilities:
-//                 1. Pipelining: The module automatically inserts pipeline
-//                    registers between adder stages to meet a target latency
-//                    (OUTPUT_DELAY).
-//                 2. Precision: The output width is automatically extended by
-//                    $clog2(NUM_INPUT) bits to guarantee no overflow.
-//                 3. Flexibility: Supports both signed and unsigned arithmetic
-//                    and handles arbitrary input counts (even or odd).
+//                 1. Input Masking: The 'input_enable' bitmask allows dynamic
+//                    selection of which inputs are included in the sum. Disabled
+//                    inputs are treated as zero.
+//                 2. Pipelining: Automatically inserts pipeline registers between
+//                    adder stages to meet the target 'OUTPUT_DELAY'.
+//                 3. Precision: Output width is automatically expanded by
+//                    $clog2(NUM_INPUT) to guarantee no overflow.
+//                 4. Flexibility: Supports Signed/Unsigned arithmetic and any
+//                    number of inputs (arbitrary even/odd counts).
 //
 // Parameters:
-//   NUM_INPUT    : Number of input signals to sum.
+//   NUM_INPUT    : Total number of input ports available.
 //   WIDTH_IN     : Bit width of a single input signal.
 //   IS_SIGNED    : 1 = Signed arithmetic (2's complement), 0 = Unsigned.
 //   OUTPUT_DELAY : Target latency in clock cycles.
-//                  - If 0: Purely combinational (0 clock cycle latency).
-//                  - If >0: Pipelined with registers inserted to distribute
-//                    logic delay across 'OUTPUT_DELAY' clock cycles.
+//                  - 0: Combinational output (0 clock cycle latency).
+//                  - >0: Pipelined output distributed over 'OUTPUT_DELAY' cycles.
 //
 // Inputs:
-//   clk  : System Clock.
-//   ena  : Clock Enable (Active High). Controls the pipeline registers.
-//   din  : Array of inputs [NUM_INPUT] x [WIDTH_IN].
+//   clk          : System Clock.
+//   ena          : Clock Enable (Active High). Freezes pipeline if low.
+//   din          : Array of inputs [NUM_INPUT] x [WIDTH_IN].
+//   input_enable : [NUM_INPUT-1:0] Bitmask to control participation in the sum.
+//                  - Bit[i] = 1: din[i] is added.
+//                  - Bit[i] = 0: din[i] is ignored (treated as 0).
 //
 // Outputs:
-//   dout : Full precision sum. Width = WIDTH_IN + $clog2(NUM_INPUT).
+//   dout         : Full precision sum. Width = WIDTH_IN + $clog2(NUM_INPUT).
 //
 // Features:
-//   - Configurable Pipeline Depth (Latency)
-//   - Balanced Adder Tree structure for minimized logic delay
-//   - Automatic Sign Extension / Zero Extension based on IS_SIGNED
-//   - Efficient Logic Grouping: Automatically groups adder levels to fit
-//     within the requested clock cycles
-//   - No Overflow: Output width grows dynamically
+//   - Dynamic Input Gating: Ignore specific channels without changing parameters.
+//   - Balanced Adder Tree: Logarithmic logic depth for high-speed performance.
+//   - Automatic Sign/Zero Extension: Handled internally based on 'IS_SIGNED'.
+//   - Configurable Pipeline: Groups adder levels to fit timing constraints.
 //
 // Usage Example:
-//   MultiInputAdder #(
+//   MultiInputAdder_wInputEnable #(
 //       .NUM_INPUT(32),
 //       .WIDTH_IN(16),
 //       .IS_SIGNED(1),
-//       .OUTPUT_DELAY(2) // Result appears 2 clocks later
+//       .OUTPUT_DELAY(2)
 //   ) u_adder (
-//       .clk(clk),
+//       .clk(sys_clk),
 //       .ena(1'b1),
-//       .din(my_data_array),
-//       .dout(sum_result)
+//       .din(sensor_data_array),
+//       .input_enable(valid_sensor_mask),
+//       .dout(total_sum)
 //   );
 //
 //////////////////////////////////////////////////////////////////////////////////
 
-module MultiInputAdder_wInputCtr #(
+module MultiInputAdder_wInputEnable #(
     parameter int NUM_INPUT    = 8,
     parameter int WIDTH_IN     = 16,
     parameter bit IS_SIGNED    = 1,
@@ -66,7 +69,7 @@ module MultiInputAdder_wInputCtr #(
 (
     input  logic clk, ena,
     input  logic [WIDTH_IN -1:0] din [NUM_INPUT],
-    input  logic [NUM_INPUT-1:0] din_ctr,
+    input  logic [NUM_INPUT-1:0] input_enable,
     output logic [WIDTH_OUT-1:0] dout
 );
 
@@ -93,13 +96,13 @@ module MultiInputAdder_wInputCtr #(
     always_comb begin
         for (int i=0; i<NUM_INPUT; i++) begin
             if (!IS_SIGNED) begin
-                if (din_ctr[i] == 1'b1)
+                if (input_enable[i] == 1'b1)
                     tree_nodes[0][i] = {{(WIDTH_OUT-WIDTH_IN){1'b0}} , din[i]};
                 else
                     tree_nodes[0][i] = {(WIDTH_IN){1'b0}};
             end
             else begin
-                if (din_ctr[i] == 1'b1)
+                if (input_enable[i] == 1'b1)
                     tree_nodes[0][i] = {{(WIDTH_OUT-WIDTH_IN){din[i][WIDTH_IN-1]}} , din[i]};
                 else
                     tree_nodes[0][i] = {(WIDTH_IN){1'b0}};

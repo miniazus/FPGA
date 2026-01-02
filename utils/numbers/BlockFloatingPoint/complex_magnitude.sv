@@ -28,9 +28,6 @@ module complex_magnitude #(
             // 1000... is -Max in signed but +Max+1 in unsigned.
             abs_i = ($signed(i_in) < 0) ? -($signed(i_in)) : $signed(i_in);
             abs_q = ($signed(q_in) < 0) ? -($signed(q_in)) : $signed(q_in);
-
-            abs_i = i_in[WIDTH-1] ? ~i_in+1 : i_in;
-
         end else begin
             // CASE: UNSIGNED INPUTS
             // Pass through directly
