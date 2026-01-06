@@ -24,12 +24,12 @@
 //                    logic delay across 'OUTPUT_DELAY' clock cycles.
 //
 // Inputs:
-//   clk  : System Clock.
-//   ena  : Clock Enable (Active High). Controls the pipeline registers.
-//   din  : Array of inputs [NUM_INPUT] x [WIDTH_IN].
+//   i_clk  : System Clock.
+//   i_ena  : Clock i_enable (Active High). Controls the pipeline registers.
+//   i_data  : Array of inputs [NUM_INPUT] x [WIDTH_IN].
 //
 // Outputs:
-//   dout : Full precision sum. Width = WIDTH_IN + $clog2(NUM_INPUT).
+//   o_data : Full precision sum. Width = WIDTH_IN + $clog2(NUM_INPUT).
 //
 // Features:
 //   - Configurable Pipeline Depth (Latency)
@@ -39,6 +39,8 @@
 //     within the requested clock cycles
 //   - No Overflow: Output width grows dynamically
 //
+// !!! DELAY = OUTPUT_DELAY
+//
 // Usage Example:
 //   MultiInputAdder #(
 //       .NUM_INPUT(32),
@@ -46,10 +48,10 @@
 //       .IS_SIGNED(1),
 //       .OUTPUT_DELAY(2) // Result appears 2 clocks later
 //   ) u_adder (
-//       .clk(clk),
-//       .ena(1'b1),
-//       .din(my_data_array),
-//       .dout(sum_result)
+//       .i_clk(i_clk),
+//       .i_ena(1'b1),
+//       .i_data(my_data_array),
+//       .o_data(sum_result)
 //   );
 //
 //////////////////////////////////////////////////////////////////////////////////
@@ -64,9 +66,9 @@ module MultiInputAdder #(
     parameter int WIDTH_OUT = WIDTH_IN + $clog2(NUM_INPUT)
 )
 (
-    input  logic clk, ena,
-    input  logic [WIDTH_IN -1:0] din [NUM_INPUT],
-    output logic [WIDTH_OUT-1:0] dout
+    input  logic i_clk, i_ena,
+    input  logic [WIDTH_IN -1:0] i_data [NUM_INPUT],
+    output logic [WIDTH_OUT-1:0] o_data
 );
 
     generate
@@ -92,9 +94,9 @@ module MultiInputAdder #(
     always_comb begin
         for (int i=0; i<NUM_INPUT; i++) begin
             if (!IS_SIGNED)
-                tree_nodes[0][i] = {{(WIDTH_OUT-WIDTH_IN){1'b0}} , din[i]};
+                tree_nodes[0][i] = {{(WIDTH_OUT-WIDTH_IN){1'b0}} , i_data[i]};
             else
-                tree_nodes[0][i] = {{(WIDTH_OUT-WIDTH_IN){din[i][WIDTH_IN-1]}} , din[i]};
+                tree_nodes[0][i] = {{(WIDTH_OUT-WIDTH_IN){i_data[i][WIDTH_IN-1]}} , i_data[i]};
         end
     end
 
@@ -109,8 +111,8 @@ module MultiInputAdder #(
 
             if ((OUTPUT_DELAY>0) && (i_level+1)%NumLevelPerCycle == 0) begin : gen_seq
                 for (i_add=0; i_add<NumAdd; i_add++) begin : gen_seq_add
-                    always_ff @(posedge clk) begin
-                        if (ena) begin
+                    always_ff @(posedge i_clk) begin
+                        if (i_ena) begin
                             tree_nodes[i_level+1][i_add] <= tree_nodes[i_level][2*i_add] +
                                                             tree_nodes[i_level][2*i_add+1];
                         end
@@ -118,8 +120,8 @@ module MultiInputAdder #(
                 end
 
                 if (PassThrough) begin : gen_seq_passthrough
-                    always_ff @(posedge clk) begin
-                        if (ena) begin
+                    always_ff @(posedge i_clk) begin
+                        if (i_ena) begin
                             tree_nodes[i_level+1][NumAdd] <= tree_nodes[i_level][2*NumAdd];
                         end
                     end
@@ -144,6 +146,6 @@ module MultiInputAdder #(
 
 
 
-    assign dout = tree_nodes[TotalLevels][0];
+    assign o_data = tree_nodes[TotalLevels][0];
 
 endmodule

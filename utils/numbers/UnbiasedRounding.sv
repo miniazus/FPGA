@@ -14,12 +14,12 @@
 //   IS_SIGNED      : Set to 1 for signed input/output, 0 for unsigned
 //
 // Inputs:
-//   clk  : Clock signal for synchronous output
-//   ena  : Enable signal to update output
-//   din  : Input number of DATA_WIDTH_IN bits
+//   i_clk  : Clock signal for synchronous output
+//   i_ena  : Enable signal to update output
+//   i_data  : Input number of DATA_WIDTH_IN bits
 //
 // Outputs:
-//   dout : Rounded and saturated output of DATA_WIDTH_OUT bits
+//   o_data : Rounded and saturated output of DATA_WIDTH_OUT bits
 //
 // Features:
 //   - Unbiased rounding (round-half-to-even) for tie cases
@@ -27,9 +27,11 @@
 //   - Synthesizable for FPGA/ASIC
 //   - Pass-through mode when output width equals input width
 //
+// !!! DELAY = 1
+//
 // Using:
 // UnbiasedRounding #(.WIDTH_IN(...),.WIDTH_OUT(...),.IS_SIGNED(...))
-//                 (.clk(...),.ena(...),.din(...),.dout(...));
+//                 (.i_clk(...),.i_ena(...),.i_data(...),.o_data(...));
 //
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -39,9 +41,9 @@ module UnbiasedRounding #(
     parameter bit  IS_SIGNED    = 1      // 0 = unsigned, 1 = signed
 )
 (
-    input  logic clk, ena,
-    input  logic signed [WIDTH_IN-1 :0] din,
-    output logic signed [WIDTH_OUT-1:0] dout
+    input  logic i_clk, i_ena,
+    input  logic signed [WIDTH_IN-1 :0] i_data,
+    output logic signed [WIDTH_OUT-1:0] o_data
 );
     // Difference in width between input and output
     localparam int                         DIFFWIDTH   = WIDTH_IN-WIDTH_OUT;
@@ -50,7 +52,8 @@ module UnbiasedRounding #(
     localparam signed   [WIDTH_OUT-1:0]    MAXVALsigned   = {1'b0, {(WIDTH_OUT-1){1'b1}}};
     localparam signed   [WIDTH_OUT-1:0]    MINVALsigned   = {1'b1, {(WIDTH_OUT-1){1'b0}}};
     // Halfway value used for round-half-to-even
-    localparam unsigned [DIFFWIDTH-1:0]    FRAC05      = 1 << (DIFFWIDTH-1);
+    localparam unsigned [DIFFWIDTH > 0 ? DIFFWIDTH-1 : 0] FRAC05 = (DIFFWIDTH > 0) ?
+                                                                        (1 << (DIFFWIDTH-1)) : 0;
 
     generate
         // Check parameter validity
@@ -77,9 +80,9 @@ module UnbiasedRounding #(
         //=======================================================
         // If no bit difference, just pass through
         if (DIFFWIDTH == 0) begin : gen_pass_throught
-            always_ff @(posedge clk) begin
-                if (ena) begin
-                    dout <= din;
+            always_ff @(posedge i_clk) begin
+                if (i_ena) begin
+                    o_data <= i_data;
                 end
             end
         end
@@ -91,17 +94,17 @@ module UnbiasedRounding #(
 
             always_comb begin
                 // Step 1: truncate to target width
-                d_trunc = din[WIDTH_IN-1:DIFFWIDTH];
+                d_trunc = i_data[WIDTH_IN-1:DIFFWIDTH];
 
                 // Step 2: unbiased rounding (round-half-to-even)
-                round_up  = (din[DIFFWIDTH-1:0] > FRAC05) ||
-                            ((din[DIFFWIDTH-1:0] == FRAC05) && d_trunc[0]);
+                round_up  = (i_data[DIFFWIDTH-1:0] > FRAC05) ||
+                            ((i_data[DIFFWIDTH-1:0] == FRAC05) && d_trunc[0]);
 
                 // 3. Apply rounding depending on mode
                 if (IS_SIGNED) begin : gen_signed_rounding
                     // Signed rounding
                     d_temp = {d_trunc[WIDTH_OUT-1], d_trunc} +
-                            (din[WIDTH_IN-1] ? -round_up : round_up);
+                            (i_data[WIDTH_IN-1] ? -round_up : round_up);
                 end
                 else begin : gen_unsigned_rounding
                     // Unsigned rounding
@@ -114,7 +117,7 @@ module UnbiasedRounding #(
                     // Signed saturation
                     if (d_temp[WIDTH_OUT] != d_temp[WIDTH_OUT-1]) begin
                         // overflow happened
-                        d_rounded = din[WIDTH_IN-1] ? MINVALsigned : MAXVALsigned;
+                        d_rounded = i_data[WIDTH_IN-1] ? MINVALsigned : MAXVALsigned;
                     end else begin
                         // no overflow
                         d_rounded = d_temp[WIDTH_OUT-1:0];
@@ -130,9 +133,9 @@ module UnbiasedRounding #(
             end
 
 
-            always_ff @(posedge clk) begin
-                if (ena) begin
-                    dout <= d_rounded;
+            always_ff @(posedge i_clk) begin
+                if (i_ena) begin
+                    o_data <= d_rounded;
                 end
             end
         end

@@ -1,14 +1,14 @@
 module bfp_calculator #(
     parameter int WIDTH = 16
 )(
-    input  logic clk,
-    input  logic rst_n,
+    input  logic i_clk,
+    input  logic i_rst_n,
     input  logic i_valid,
-    input  logic last_sample,
-    input  logic [WIDTH-1:0] mag_in,
+    input  logic i_last_sample,
+    input  logic [WIDTH-1:0] i_mag,
 
-    output logic [$clog2(WIDTH+1)-1:0] shift_factor,
-    output logic shift_valid // Tells the next stage "Calculation Done"
+    output logic [$clog2(WIDTH+1)-1:0] o_shift_factor,
+    output logic o_shift_valid // Tells the next stage "Calculation Done"
 );
 
     logic [WIDTH-1:0] block_peak;
@@ -18,25 +18,25 @@ module bfp_calculator #(
     // ---------------------------------------------------------
     // STAGE 1: Peak Detection & Latching
     // ---------------------------------------------------------
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
+    always_ff @(posedge i_clk or negedge i_rst_n) begin
+        if (!i_rst_n) begin
             block_peak <= '0;
             latched_final_peak <= '0;
             calc_enable <= 1'b0;
         end else if (i_valid) begin
             // 1. Peak Tracking
-            if (last_sample) begin
+            if (i_last_sample) begin
                 // On the last sample, we finalize the peak calculation
                 // comparing the accumulated peak vs the current incoming sample
-                latched_final_peak <= (mag_in > block_peak) ? mag_in : block_peak;
+                latched_final_peak <= (i_mag > block_peak) ? i_mag : block_peak;
 
                 block_peak <= '0; // Reset for next block
                 calc_enable <= 1'b1; // Trigger Stage 2
             end
             else begin
                 // Normal accumulation
-                if (mag_in > block_peak)
-                    block_peak <= mag_in;
+                if (i_mag > block_peak)
+                    block_peak <= i_mag;
 
                 calc_enable <= 1'b0;
             end
@@ -64,14 +64,14 @@ module bfp_calculator #(
     end
 
     // Output Register
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            shift_factor <= '0;
-            shift_valid <= 1'b0;
+    always_ff @(posedge i_clk or negedge i_rst_n) begin
+        if (!i_rst_n) begin
+            o_shift_factor <= '0;
+            o_shift_valid  <= '0;
         end else begin
-            shift_valid <= calc_enable; // Pulse valid 1 cycle after last_sample
+            o_shift_valid <= calc_enable; // Pulse valid 1 cycle after i_last_sample
             if (calc_enable) begin
-                shift_factor <= calc_zeros;
+                o_shift_factor <= calc_zeros;
             end
         end
     end

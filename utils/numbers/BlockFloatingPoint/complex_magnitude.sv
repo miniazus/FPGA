@@ -10,9 +10,9 @@ module complex_magnitude #(
     parameter int WIDTH = 16,
     parameter bit IS_SIGNED = 1         // 0 = Unsigned Input, 1 = Signed Input
 )(
-    input  logic [WIDTH-1:0] i_in,      // Generic bits (type determined by param)
-    input  logic [WIDTH-1:0] q_in,
-    output logic [WIDTH-1:0] mag_out
+    input  logic [WIDTH-1:0] i_I,      // Generic bits (type determined by param)
+    input  logic [WIDTH-1:0] i_Q,
+    output logic [WIDTH-1:0] o_mag
 );
 
     // 1. Unified Absolute Value Logic
@@ -26,13 +26,13 @@ module complex_magnitude #(
             // Note: We cast to signed for the check, but the result is stored as unsigned bits.
             // Handling -Max (e.g., -32768) -> +32768 works because the bit pattern
             // 1000... is -Max in signed but +Max+1 in unsigned.
-            abs_i = ($signed(i_in) < 0) ? -($signed(i_in)) : $signed(i_in);
-            abs_q = ($signed(q_in) < 0) ? -($signed(q_in)) : $signed(q_in);
+            abs_i = ($signed(i_I) < 0) ? -($signed(i_I)) : $signed(i_I);
+            abs_q = ($signed(i_Q) < 0) ? -($signed(i_Q)) : $signed(i_Q);
         end else begin
             // CASE: UNSIGNED INPUTS
             // Pass through directly
-            abs_i = i_in;
-            abs_q = q_in;
+            abs_i = i_I;
+            abs_q = i_Q;
         end
     end
 
@@ -61,6 +61,6 @@ module complex_magnitude #(
     // 4. Final Saturation
     // -------------------
     // If input was Unsigned 255, result could be 382. We must clip to 255.
-    assign mag_out = (sum_temp > {WIDTH{1'b1}}) ? {WIDTH{1'b1}} : sum_temp[WIDTH-1:0];
+    assign o_mag = (sum_temp > {WIDTH{1'b1}}) ? {WIDTH{1'b1}} : sum_temp[WIDTH-1:0];
 
 endmodule

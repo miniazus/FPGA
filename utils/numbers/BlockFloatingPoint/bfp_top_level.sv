@@ -3,24 +3,24 @@ module bfp_top_level #(
     parameter int BLOCK_SIZE = 256, // Samples per block
     parameter bit IS_SIGNED = 1     // 1 = Signed (2's Comp), 0 = Unsigned
 )(
-    input  logic clk,
-    input  logic rst_n,
+    input  logic i_clk,
+    input  logic i_rst_n,
 
     // Parameterized Inputs
-    input  logic [WIDTH-1:0] i_in,
-    input  logic [WIDTH-1:0] q_in,
-    input  logic valid_in,
-    input  logic last_in, // Signals the last sample of the block
+    input  logic [WIDTH-1:0] i_I,
+    input  logic [WIDTH-1:0] i_Q,
+    input  logic i_valid,
+    input  logic i_last, // Signals the last sample of the block
 
     // Parameterized Outputs
-    output logic [WIDTH-1:0] i_out,
-    output logic [WIDTH-1:0] q_out,
+    output logic [WIDTH-1:0] o_I,
+    output logic [WIDTH-1:0] o_Q,
 
     // Dynamic Exponent Width:
     // If WIDTH=16, max shift is 16. We need 5 bits ($clog2(17)).
     // If WIDTH=32, max shift is 32. We need 6 bits ($clog2(33)).
-    output logic [$clog2(WIDTH+1)-1:0] exponent_out,
-    output logic valid_out
+    output logic [$clog2(WIDTH+1)-1:0] o_exponent,
+    output logic o_valid
 );
 
     // ---------------------------------------------------------
@@ -46,9 +46,9 @@ module bfp_top_level #(
         .WIDTH(WIDTH),
         .IS_SIGNED(IS_SIGNED)
     ) mag_inst (
-        .i_in(i_in),
-        .q_in(q_in),
-        .mag_out(mag)
+        .i_I(i_I),
+        .i_Q(i_Q),
+        .o_mag(mag)
     );
 
     // ---------------------------------------------------------
@@ -59,12 +59,12 @@ module bfp_top_level #(
         .DATA_WIDTH(WIDTH),
         .BLOCK_SIZE(BLOCK_SIZE)
     ) bfp_calc_inst (
-        .clk(clk),
-        .rst_n(rst_n),
-        .i_valid(valid_in),
-        .last_sample(last_in),
-        .mag_in(mag),
-        .shift_factor(calculated_shift) // Output valid 1 cycle after last_sample (assuming pipelined or fast)
+        .i_clk(i_clk),
+        .i_rst_n(i_rst_n),
+        .i_valid(i_valid),
+        .i_last_sample(i_last),
+        .o_mag(mag),
+        .o_shift_factor(calculated_shift) // Output valid 1 cycle after last_sample (assuming pipelined or fast)
     );
 
     // ---------------------------------------------------------
@@ -78,11 +78,11 @@ module bfp_top_level #(
         .DATA_WIDTH(2 * WIDTH),
         .DEPTH(BLOCK_SIZE)
     ) data_fifo (
-        .clk(clk), 
-        .rst_n(rst_n),
-        .push(valid_in),
-        .din({i_in, q_in}),      // Pack I and Q
-        .pop(valid_in),          // Read out at same rate we write (constant delay)
+        .i_clk(i_clk),
+        .i_rst_n(i_rst_n),
+        .push(i_valid),
+        .din({i_I, i_Q}),      // Pack I and Q
+        .pop(i_valid),          // Read out at same rate we write (constant delay)
         .dout({fifo_i, fifo_q}), // Unpack I and Q
         .valid(fifo_valid)       // Valid indicates data is emerging from delay
     );
@@ -93,24 +93,24 @@ module bfp_top_level #(
     // Shifts the data LEFT to remove leading zeros (maximize dynamic range).
     // This effectively boosts quiet signals to use the full bit width.
 
-    always_ff @(posedge clk or negedge rst_n) begin
-        if (!rst_n) begin
-            i_out <= '0;
-            q_out <= '0;
-            exponent_out <= '0;
-            valid_out <= 1'b0;
+    always_ff @(posedge i_clk or negedge i_rst_n) begin
+        if (!i_rst_n) begin
+            o_I <= '0;
+            o_Q <= '0;
+            o_exponent <= '0;
+            o_valid <= 1'b0;
         end else begin
             if (fifo_valid) begin
                 // Apply the Block Exponent
                 // Note: We assume 'calculated_shift' is stable for the duration 
                 // of the block coming out of the FIFO.
-                i_out <= fifo_i << calculated_shift;
-                q_out <= fifo_q << calculated_shift;
+                o_I <= fifo_i << calculated_shift;
+                o_Q <= fifo_q << calculated_shift;
 
-                exponent_out <= calculated_shift;
-                valid_out <= 1'b1;
+                o_exponent <= calculated_shift;
+                o_valid <= 1'b1;
             end else begin
-                valid_out <= 1'b0;
+                o_valid <= 1'b0;
             end
         end
     end
