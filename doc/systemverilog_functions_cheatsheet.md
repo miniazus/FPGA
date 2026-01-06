@@ -1,75 +1,69 @@
-# SystemVerilog System Functions Cheat Sheet for Synthesis
+# SystemVerilog System Functions Cheat Sheet (with Complexity)
 
-### 1. Math & Sizing (Essential for Parameterization)
-*Used extensively in module headers and `generate` blocks to calculate widths and constants.*
+### 1. Math & Sizing (Parameterization)
+*These functions run on your computer during compilation. They create **Zero Hardware**.*
 
-| Function | Description | Synthesizable? | Usage Example |
+| Function | Description | Synthesizable? | Hardware Cost |
 | :--- | :--- | :--- | :--- |
-| **`$clog2(x)`** | Ceiling Log Base 2. | **✅ YES** | `localparam WIDTH = $clog2(16); // 4` |
-| **`$bits(x)`** | Returns bit width of variable/type. | **✅ YES** | `localparam SIZE = $bits(my_struct_t);` |
-| **`$high(x)`** | Returns highest index of array. | **✅ YES** | `for(i=0; i<=$high(arr); i++)` |
-| **`$low(x)`** | Returns lowest index of array. | **✅ YES** | `for(i=$low(arr); i<10; i++)` |
-| **`$size(x)`** | Returns number of array elements. | **✅ YES** | `int len = $size(my_array);` |
-| **`$ln(x)`** | Natural Logarithm. | **❌ NO** | Simulation only. |
-| **`$sqrt(x)`** | Square Root. | **❌ NO** | Simulation only (use CORDIC IP instead). |
+| **`$clog2(x)`** | Ceiling Log Base 2. | **✅ YES** | **None** (Calculated at build time). |
+| **`$bits(x)`** | Returns bit width. | **✅ YES** | **None** (Calculated at build time). |
+| **`$high(x)`** | Highest array index. | **✅ YES** | **None** (Calculated at build time). |
+| **`$low(x)`** | Lowest array index. | **✅ YES** | **None** (Calculated at build time). |
+| **`$size(x)`** | Array element count. | **✅ YES** | **None** (Calculated at build time). |
 
 ---
 
 ### 2. Data Conversion & Casting
-*Used to manipulate data types inside logic blocks, especially for signed math.*
+*Used to reinterpret bits. Most are just "renaming wires" and cost nothing.*
 
-| Function | Description | Synthesizable? | Usage Example |
+| Function | Description | Synthesizable? | Hardware Cost |
 | :--- | :--- | :--- | :--- |
-| **`$signed(x)`** | Interprets vector as signed (2's comp). | **✅ YES** | `val = $signed(a) * $signed(b);` |
-| **`$unsigned(x)`** | Interprets vector as unsigned. | **✅ YES** | `val = $unsigned(a);` |
-| **`$cast(d, s)`**| Dynamic casting (checks validity). | **✅ YES** | `$cast(my_enum_var, 3'b010);` |
-| **`$itor(x)`** | Integer to Real conversion. | **❌ NO** | Reals do not exist in hardware. |
-| **`$rtoi(x)`** | Real to Integer conversion. | **⚠️ CONST** | Only if input is constant parameter. |
+| **`$signed(x)`** | Treat as 2's comp. | **✅ YES** | **None** (Wires only). |
+| **`$unsigned(x)`** | Treat as unsigned. | **✅ YES** | **None** (Wires only). |
+| **`$cast(d, s)`**| Dynamic casting. | **✅ YES** | **Low** (Simple Mux/Logic checks). |
+| **`$rtoi(x)`** | Real to Integer. | **⚠️ CONST** | **None** (If input is constant parameter). |
 
 ---
 
 ### 3. Bit Analysis (SystemVerilog 2012+)
-*Very useful for complex logic reduction and assertions.*
+*These generate actual logic gates (LUTs).*
 
-| Function | Description | Synthesizable? | Usage Example |
+| Function | Description | Synthesizable? | Hardware Cost |
 | :--- | :--- | :--- | :--- |
-| **`$countbits(x, v)`**| Counts bits matching value `v`. | **✅ YES** | `ones = $countbits(data, 1'b1);` |
-| **`$onehot(x)`** | Returns true if exactly 1 bit is high. | **✅ YES** | `if ($onehot(grant_vector)) ...` |
-| **`$onehot0(x)`** | Returns true if 0 or 1 bit is high. | **✅ YES** | `if ($onehot0(grant_vector)) ...` |
-| **`$isunknown(x)`** | Checks if any bit is 'X' or 'Z'. | **❌ NO** | Hardware is never 'unknown'. |
+| **`$countbits(x, v)`**| Count matching bits. | **✅ YES** | **Medium/High** (Infers an Adder Tree). |
+| **`$onehot(x)`** | Is exactly 1 bit high? | **✅ YES** | **Low/Medium** (Comparator logic). |
+| **`$onehot0(x)`** | Is 0 or 1 bit high? | **✅ YES** | **Low/Medium** (Comparator logic). |
 
 ---
 
 ### 4. Memory Initialization
-*Used to load Look-Up Tables (LUTs) and ROMs.*
+*Used to infer large storage blocks.*
 
-| Function | Description | Synthesizable? | Usage Example |
+| Function | Description | Synthesizable? | Hardware Cost |
 | :--- | :--- | :--- | :--- |
-| **`$readmemh("f", m)`**| Loads Hex file into array. | **✅ YES** | `initial $readmemh("sin.hex", mem);` |
-| **`$readmemb("f", m)`**| Loads Binary file into array. | **✅ YES** | `initial $readmemb("cfg.bin", mem);` |
+| **`$readmemh("f", m)`**| Load Hex file. | **✅ YES** | **High** (Infers Block RAM / ROM). |
+| **`$readmemb("f", m)`**| Load Binary file. | **✅ YES** | **High** (Infers Block RAM / ROM). |
 
 ---
 
 ### 5. Display & Debugging
-*Used for reporting status during compilation or simulation.*
+*These are for humans, not hardware.*
 
-| Function | Description | Synthesizable? | Usage Example |
+| Function | Description | Synthesizable? | Hardware Cost |
 | :--- | :--- | :--- | :--- |
-| **`$error("msg")`** | Reports error. | **⚠️ YES** | Halts Synthesis (good for checks). |
-| **`$fatal("msg")`** | Reports fatal error. | **⚠️ YES** | Halts Synthesis immediately. |
-| **`$warning("msg")`** | Reports warning. | **⚠️ YES** | Prints log warning but continues. |
-| **`$display("msg")`** | Prints to console. | **❌ NO** | Ignored by synthesis. |
-| **`$monitor("msg")`** | Prints when args change. | **❌ NO** | Simulation only. |
-| **`$stop`** | Pauses simulation. | **❌ NO** | Simulation only. |
-| **`$finish`** | Ends simulation. | **❌ NO** | Simulation only. |
+| **`$error("msg")`** | Report error. | **⚠️ YES** | **None** (Stops the compiler). |
+| **`$fatal("msg")`** | Report fatal error. | **⚠️ YES** | **None** (Stops the compiler). |
+| **`$warning("msg")`** | Report warning. | **⚠️ YES** | **None** (Log message only). |
+| **`$display("msg")`** | Print to console. | **❌ NO** | **N/A** (Ignored). |
 
 ---
 
-### 6. Randomization & Time
-*Used primarily in Testbenches (Simulation).*
+### 6. Simulation Utilities
+*Never use these in your RTL design files.*
 
-| Function | Description | Synthesizable? | Usage Example |
+| Function | Description | Synthesizable? | Complexity |
 | :--- | :--- | :--- | :--- |
-| **`$urandom()`** | Unsigned random integer. | **❌ NO** | `data = $urandom();` |
-| **`$random()`** | Signed random integer (Legacy). | **❌ NO** | Avoid. Use `$urandom`. |
-| **`$time`** | Current simulation time. | **❌ NO** | `$display("Time: %t", $time);` |
+| **`$urandom()`** | Unsigned random. | **❌ NO** | **High** (Software PRNG algo). |
+| **`$time`** | Current time. | **❌ NO** | **Low** (Reads sim variable). |
+| **`$sqrt(x)`** | Square Root. | **❌ NO** | **Very High** (If built in HW, needs CORDIC). |
+| **`$ln(x)`** | Natural Log. | **❌ NO** | **Very High** (If built in HW, needs Taylor Series). |
