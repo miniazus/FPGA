@@ -5,11 +5,11 @@
 
 | Function | Description | Synth? | Hardware Cost | Usage Example |
 | :--- | :--- | :--- | :--- | :--- |
-| **`$clog2(x)`** | Ceiling Log Base 2. | ✅ | **None** | `localparam W = $clog2(16);` |
-| **`$bits(x)`** | Returns bit width. | ✅ | **None** | `localparam S = $bits(my_struct);` |
-| **`$high(x)`** | Highest array index. | ✅ | **None** | `for(i=0; i<=$high(arr); i++)` |
-| **`$low(x)`** | Lowest array index. | ✅ | **None** | `for(i=$low(arr); i<10; i++)` |
-| **`$size(x)`** | Array element count. | ✅ | **None** | `int len = $size(my_array);` |
+| **`$clog2(x)`** | Ceiling Log Base 2. | ✅ | **None** (Calculated at build time). | `localparam W = $clog2(16);` |
+| **`$bits(x)`** | Returns bit width. | ✅ | **None** (Calculated at build time). | `localparam S = $bits(packet_t);` |
+| **`$high(x)`** | Highest array index. | ✅ | **None** (Calculated at build time). | `for(i=0; i<=$high(arr); i++)` |
+| **`$low(x)`** | Lowest array index. | ✅ | **None** (Calculated at build time). | `for(i=$low(arr); i<10; i++)` |
+| **`$size(x)`** | Array element count. | ✅ | **None** (Calculated at build time). | `int len = $size(my_array);` |
 
 ---
 
@@ -18,10 +18,10 @@
 
 | Function | Description | Synth? | Hardware Cost | Usage Example |
 | :--- | :--- | :--- | :--- | :--- |
-| **`$signed(x)`** | Treat as 2's comp. | ✅ | **None** (Wires) | `y = $signed(a) * $signed(b);` |
-| **`$unsigned(x)`** | Treat as unsigned. | ✅ | **None** (Wires) | `y = $unsigned(a);` |
-| **`$cast(d, s)`**| Dynamic casting. | ✅ | **Low** (Mux) | `$cast(state, 3'b010);` |
-| **`$rtoi(x)`** | Real to Integer. | ⚠️ | **None** (Constants) | `localparam I = $rtoi(2.5);` |
+| **`$signed(x)`** | Treat as 2's comp. | ✅ | **None** (Wires only). | `y = $signed(a) * $signed(b);` |
+| **`$unsigned(x)`** | Treat as unsigned. | ✅ | **None** (Wires only). | `y = $unsigned(a);` |
+| **`$cast(d, s)`**| Dynamic casting. | ✅ | **Low** (Simple Mux/Logic checks). | `$cast(state, 3'b010);` |
+| **`$rtoi(x)`** | Real to Integer. | ⚠️ | **None** (If input is constant parameter). | `localparam I = $rtoi(2.5);` |
 
 ---
 
@@ -30,9 +30,9 @@
 
 | Function | Description | Synth? | Hardware Cost | Usage Example |
 | :--- | :--- | :--- | :--- | :--- |
-| **`$countbits(x, v)`**| Count matching bits. | ✅ | **Medium** (Adder Tree) | `cnt = $countbits(data, 1'b1);` |
-| **`$onehot(x)`** | Is exactly 1 bit high? | ✅ | **Low** (Comparator) | `if ($onehot(request)) ...` |
-| **`$onehot0(x)`** | Is 0 or 1 bit high? | ✅ | **Low** (Comparator) | `if ($onehot0(request)) ...` |
+| **`$countbits(x, v)`**| Count matching bits. | ✅ | **Medium/High** (Infers an Adder Tree). | `cnt = $countbits(data, 1'b1);` |
+| **`$onehot(x)`** | Is exactly 1 bit high? | ✅ | **Low/Medium** (Comparator logic). | `if ($onehot(request)) ...` |
+| **`$onehot0(x)`** | Is 0 or 1 bit high? | ✅ | **Low/Medium** (Comparator logic). | `if ($onehot0(request)) ...` |
 
 ---
 
@@ -41,8 +41,8 @@
 
 | Function | Description | Synth? | Hardware Cost | Usage Example |
 | :--- | :--- | :--- | :--- | :--- |
-| **`$readmemh("f", m)`**| Load Hex file. | ✅ | **High** (Block RAM) | `initial $readmemh("sine.hex", mem);` |
-| **`$readmemb("f", m)`**| Load Binary file. | ✅ | **High** (Block RAM) | `initial $readmemb("cfg.bin", mem);` |
+| **`$readmemh("f", m)`**| Load Hex file. | ✅ | **High** (Infers Block RAM / ROM). | `initial $readmemh("sin.hex", mem);` |
+| **`$readmemb("f", m)`**| Load Binary file. | ✅ | **High** (Infers Block RAM / ROM). | `initial $readmemb("cfg.bin", mem);` |
 
 ---
 
@@ -51,19 +51,19 @@
 
 | Function | Description | Synth? | Hardware Cost | Usage Example |
 | :--- | :--- | :--- | :--- | :--- |
-| **`$error("m")`** | Report error. | ⚠️ | **None** (Stops Build) | `initial if (P<0) $error("Bad P");` |
-| **`$warning("m")`** | Report warning. | ⚠️ | **None** (Log Only) | `$warning("Careful!");` |
-| **`$display("m")`** | Print to console. | ❌ | **N/A** (Ignored) | `$display("Val: %d", val);` |
-| **`$stop`** | Pause simulation. | ❌ | **N/A** (Ignored) | `if (err) $stop;` |
+| **`$error("m")`** | Report error. | ⚠️ | **None** (Stops the compiler). | `initial if (P<0) $error("Bad P");` |
+| **`$warning("m")`** | Report warning. | ⚠️ | **None** (Log message only). | `$warning("Careful!");` |
+| **`$display("m")`** | Print to console. | ❌ | **N/A** (Ignored by synthesis). | `$display("Val: %d", val);` |
+| **`$stop`** | Pause simulation. | ❌ | **N/A** (Ignored by synthesis). | `if (err) $stop;` |
 
 ---
 
 ### 6. Simulation Utilities (Do Not Synthesize)
 *Never use these in your RTL design files.*
 
-| Function | Description | Synth? | Complexity | Usage Example |
+| Function | Description | Synth? | Hardware Cost | Usage Example |
 | :--- | :--- | :--- | :--- | :--- |
-| **`$urandom()`** | Unsigned random. | ❌ | **High** (Software) | `data = $urandom();` |
-| **`$time`** | Current time. | ❌ | **Low** (Variable) | `$display("T=%t", $time);` |
-| **`$sqrt(x)`** | Square Root. | ❌ | **Very High** | Use CORDIC IP instead. |
-| **`$ln(x)`** | Natural Log. | ❌ | **Very High** | Use Look-Up Table instead. |
+| **`$urandom()`** | Unsigned random. | ❌ | **High** (Software PRNG algo). | `data = $urandom();` |
+| **`$time`** | Current time. | ❌ | **Low** (Reads sim variable). | `$display("T=%t", $time);` |
+| **`$sqrt(x)`** | Square Root. | ❌ | **Very High** (Need CORDIC IP). | Use IP Catalog instead. |
+| **`$ln(x)`** | Natural Log. | ❌ | **Very High** (Need Taylor Series). | Use Look-Up Table instead. |
