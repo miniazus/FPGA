@@ -1,69 +1,71 @@
-# SystemVerilog System Functions Cheat Sheet
-
-### 1. Math & Sizing (Parameterization)
-*These functions run on your computer during compilation. They create **Zero Hardware**.*
-
-| Function | Description | Synth? | Hardware Cost | Usage Example |
-| :--- | :--- | :--- | :--- | :--- |
-| **`$clog2(x)`** | Ceiling Log Base 2. | ✅ | **None** (Calculated at build time). | `localparam W = $clog2(16);` |
-| **`$bits(x)`** | Returns bit width. | ✅ | **None** (Calculated at build time). | `localparam S = $bits(packet_t);` |
-| **`$high(x)`** | Highest array index. | ✅ | **None** (Calculated at build time). | `for(i=0; i<=$high(arr); i++)` |
-| **`$low(x)`** | Lowest array index. | ✅ | **None** (Calculated at build time). | `for(i=$low(arr); i<10; i++)` |
-| **`$size(x)`** | Array element count. | ✅ | **None** (Calculated at build time). | `int len = $size(my_array);` |
-
----
-
-### 2. Data Conversion & Casting
-*Used to reinterpret bits. Most are just "renaming wires" and cost nothing.*
-
-| Function | Description | Synth? | Hardware Cost | Usage Example |
-| :--- | :--- | :--- | :--- | :--- |
-| **`$signed(x)`** | Treat as 2's comp. | ✅ | **None** (Wires only). | `y = $signed(a) * $signed(b);` |
-| **`$unsigned(x)`** | Treat as unsigned. | ✅ | **None** (Wires only). | `y = $unsigned(a);` |
-| **`$cast(d, s)`**| Dynamic casting. | ✅ | **Low** (Simple Mux/Logic checks). | `$cast(state, 3'b010);` |
-| **`$rtoi(x)`** | Real to Integer. | ⚠️ | **None** (If input is constant parameter). | `localparam I = $rtoi(2.5);` |
-
----
-
-### 3. Bit Analysis (SystemVerilog 2012+)
-*These generate actual logic gates (LUTs).*
-
-| Function | Description | Synth? | Hardware Cost | Usage Example |
-| :--- | :--- | :--- | :--- | :--- |
-| **`$countbits(x, v)`**| Count matching bits. | ✅ | **Medium/High** (Infers an Adder Tree). | `cnt = $countbits(data, 1'b1);` |
-| **`$onehot(x)`** | Is exactly 1 bit high? | ✅ | **Low/Medium** (Comparator logic). | `if ($onehot(request)) ...` |
-| **`$onehot0(x)`** | Is 0 or 1 bit high? | ✅ | **Low/Medium** (Comparator logic). | `if ($onehot0(request)) ...` |
-
----
-
-### 4. Memory Initialization
-*Used to infer large storage blocks.*
-
-| Function | Description | Synth? | Hardware Cost | Usage Example |
-| :--- | :--- | :--- | :--- | :--- |
-| **`$readmemh("f", m)`**| Load Hex file. | ✅ | **High** (Infers Block RAM / ROM). | `initial $readmemh("sin.hex", mem);` |
-| **`$readmemb("f", m)`**| Load Binary file. | ✅ | **High** (Infers Block RAM / ROM). | `initial $readmemb("cfg.bin", mem);` |
-
----
-
-### 5. Display & Debugging
-*These are for humans, not hardware.*
-
-| Function | Description | Synth? | Hardware Cost | Usage Example |
-| :--- | :--- | :--- | :--- | :--- |
-| **`$error("m")`** | Report error. | ⚠️ | **None** (Stops the compiler). | `initial if (P<0) $error("Bad P");` |
-| **`$warning("m")`** | Report warning. | ⚠️ | **None** (Log message only). | `$warning("Careful!");` |
-| **`$display("m")`** | Print to console. | ❌ | **N/A** (Ignored by synthesis). | `$display("Val: %d", val);` |
-| **`$stop`** | Pause simulation. | ❌ | **N/A** (Ignored by synthesis). | `if (err) $stop;` |
-
----
-
-### 6. Simulation Utilities (Do Not Synthesize)
-*Never use these in your RTL design files.*
-
-| Function | Description | Synth? | Hardware Cost | Usage Example |
-| :--- | :--- | :--- | :--- | :--- |
-| **`$urandom()`** | Unsigned random. | ❌ | **High** (Software PRNG algo). | `data = $urandom();` |
-| **`$time`** | Current time. | ❌ | **Low** (Reads sim variable). | `$display("T=%t", $time);` |
-| **`$sqrt(x)`** | Square Root. | ❌ | **Very High** (Need CORDIC IP). | Use IP Catalog instead. |
-| **`$ln(x)`** | Natural Log. | ❌ | **Very High** (Need Taylor Series). | Use Look-Up Table instead. |
+Function,Description,Synth?,Hardware Cost,Usage Example
+1. Bit Analysis & Logic,,,,
+$countones(x),Count bits set to 1.,✅,Medium (Adder Tree),cnt = $countones(bus);
+"$countbits(x, v)",Count bits matching value v.,✅,Medium (Adder Tree),"zeros = $countbits(bus, 1'b0);"
+$onehot(x),True if exactly one bit is 1.,✅,Low (Comparator),if ($onehot(grant)) ...
+$onehot0(x),True if zero or one bit is 1.,✅,Low (Comparator),if ($onehot0(grant)) ...
+$isunknown(x),True if any bit is X or Z.,✅,Low (Comparator),if (!$isunknown(valid)) ...
+2. Sizing & Array Query,,,,
+$clog2(x),Ceiling Log Base 2.,✅,None (Constant Calc),localparam W = $clog2(128);
+$bits(x),Total bit width of type/var.,✅,None (Constant Calc),localparam W = $bits(pkt_t);
+$size(x),Number of elements in array.,✅,None (Constant Calc),len = $size(fifo_mem);
+$high(x),Highest index of array.,✅,None (Constant Calc),for(i=0; i<=$high(arr); i++)
+$low(x),Lowest index of array.,✅,None (Constant Calc),for(i=$low(arr); i<8; i++)
+$left(x),Left-most dimension index.,✅,None (Constant Calc),msb = $left(bus);
+$right(x),Right-most dimension index.,✅,None (Constant Calc),lsb = $right(bus);
+$dimensions(x),Number of array dimensions.,✅,None (Constant Calc),if ($dimensions(arr)==2)
+$unpacked_dimensions(x),Count of unpacked dims.,✅,None (Constant Calc),dims = $unpacked_dimensions(x);
+$increment(x),"Returns 1 if [0:N], -1 if [N:0].",✅,None (Constant Calc),step = $increment(arr);
+3. Type Conversion,,,,
+$signed(x),Interpret as 2's Compl.,✅,None (Wire Rename),res = $signed(a) >>> 2;
+$unsigned(x),Interpret as Unsigned.,✅,None (Wire Rename),res = $unsigned(a) / 2;
+"$cast(dest, src)",Dynamic type cast/check.,✅,Low (Logic Check),"if(!$cast(enum_v, int_v))"
+$itor(x),Integer to Real.,⚠️,N/A (Sim Only),real r = $itor(int_v);
+$rtoi(x),Real to Integer (Truncate).,⚠️,None (If Const),localparam I = $rtoi(2.5);
+$bitstoreal(x),64-bits to Real (IEEE 754).,❌,N/A (Sim Only),real r = $bitstoreal(bits);
+$realtobits(x),Real to 64-bits (IEEE 754).,❌,N/A (Sim Only),logic [63:0] b = $realtobits(r);
+$shortrealtobits(x),ShortReal to 32-bits.,❌,N/A (Sim Only),logic [31:0] b = $shortrealtobits(f);
+4. Assertions & Sampling,,,,
+$rose(x),True if signal rose (0->1).,✅,Low (1 FF + Logic),assert property (@(posedge c) $rose(req));
+$fell(x),True if signal fell (1->0).,✅,Low (1 FF + Logic),if ($fell(ack)) ...
+$stable(x),True if signal is same.,✅,Low (1 FF + Logic),assert property ($stable(data));
+$changed(x),True if signal changed.,✅,Low (1 FF + Logic),if ($changed(cfg)) ...
+"$past(x, n)",Value from n cycles ago.,✅,Medium (n FFs),"if (val == $past(val, 2))"
+$sampled(x),Value at start of timeslot.,✅,None (Sim Sampling),data <= $sampled(in);
+$inferred_clock,Get context clock event.,✅,None (Meta),default clocking @$inferred_clock;
+5. Memory Loading,,,,
+"$readmemh(""f"", m)",Load Hex file to Memory.,✅,High (Init BRAM),"initial $readmemh(""rom.hex"", mem);"
+"$readmemb(""f"", m)",Load Bin file to Memory.,✅,High (Init BRAM),"initial $readmemb(""rom.bin"", mem);"
+6. Randomization,,,,
+$urandom(seed),Unsigned 32b Random.,❌,N/A (Sim Only),addr = $urandom();
+"$urandom_range(mx,mn)",Random within range.,❌,N/A (Sim Only),"delay = $urandom_range(100, 10);"
+"$dist_uniform(s,mn,mx)",Uniform Distribution.,❌,N/A (Sim Only),"val = $dist_uniform(seed, 0, 10);"
+"$dist_normal(s,u,sd)",Normal Distribution.,❌,N/A (Sim Only),"val = $dist_normal(seed, 50, 5);"
+7. Display & I/O,,,,
+"$display(""fmt"", ...)",Print line to console.,❌,N/A (Sim Only),"$display(""Val: %h"", data);"
+"$write(""fmt"", ...)",Print without newline.,❌,N/A (Sim Only),"$write(""Loading..."");"
+"$strobe(""fmt"", ...)",Print at end of timestep.,❌,N/A (Sim Only),"$strobe(""Final val: %b"", bus);"
+"$monitor(""fmt"", ...)",Auto-print on change.,❌,N/A (Sim Only),"initial $monitor(""T=%t D=%h"", $time, d);"
+"$sformatf(""fmt"", ...)",Return formatted string.,❌,N/A (Sim Only),"string s = $sformatf(""err_%0d"", i);"
+"$fopen(""f"", ""m"")",Open file handle.,❌,N/A (Sim Only),"int fd = $fopen(""log.txt"", ""w"");"
+$fclose(fd),Close file handle.,❌,N/A (Sim Only),$fclose(fd);
+"$fwrite(fd, ""fmt"")",Write to file.,❌,N/A (Sim Only),"$fwrite(fd, ""Data: %h\n"", d);"
+"$fscanf(fd, ""fmt"", v)",Read vars from file.,❌,N/A (Sim Only),"$fscanf(fd, ""%d %s"", val, str);"
+$feof(fd),Check End-Of-File.,❌,N/A (Sim Only),while (!$feof(fd)) ...
+8. Simulation Control,,,,
+$time,Current Time (64b).,❌,N/A (Sim Only),t_start = $time;
+$realtime,Current Time (Real).,❌,N/A (Sim Only),if ($realtime > 10.5ns) ...
+$finish(n),End Simulation.,❌,N/A (Sim Only),initial #1000 $finish;
+$stop(n),Pause Simulation.,❌,N/A (Sim Only),if (error) $stop;
+"$fatal(n, ""msg"")",Fatal Error (Kill Sim).,⚠️,N/A (Sim Only),"$fatal(1, ""Memory Corrupt"");"
+"$error(""msg"")",Error (Continue Sim).,⚠️,N/A (Sim Only),"$error(""Timeout detected"");"
+"$warning(""msg"")",Warning Message.,⚠️,N/A (Sim Only),"$warning(""Loose timing"");"
+"$test$plusargs(""s"")",Check command line arg.,❌,N/A (Sim Only),"if ($test$plusargs(""DEBUG""))"
+"$value$plusargs(""s"",v)",Get command line value.,❌,N/A (Sim Only),"$value$plusargs(""SEED=%d"", s);"
+9. Advanced Math,,,,
+$sqrt(x),Square Root.,❌,Very High (Requires IP),y = $sqrt(x);
+"$pow(x, y)",Power (xy).,❌,Very High (Requires IP),"y = $pow(2, x);"
+$ln(x),Natural Log.,❌,Very High (Requires IP),y = $ln(val);
+$sin(x) / $cos(x),Sine / Cosine.,❌,Very High (Requires IP),y = $sin(theta);
+$ceil(x),Ceiling (Round Up).,❌,N/A (Sim Only),int i = $ceil(2.3);
+$floor(x),Floor (Round Down).,❌,N/A (Sim Only),int i = $floor(2.9);
