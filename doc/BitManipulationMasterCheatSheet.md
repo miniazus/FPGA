@@ -12,7 +12,7 @@
 | :--- | :--- | :--- | :--- |
 | **Isolate Lowest Set Bit** | `x & (-x)` | `1010` (`10`) &rarr; `0010` (`2`) | **Priority Arbiter:** Finds the next user to serve. |
 | **Clear Lowest Set Bit** | `x & (x - 1)` | `1010` (`10`) &rarr; `1000` (`8`) | **Looping:** Removes the user just served. |
-| **Set Lowest Zero Bit** | `x | (x + 1)` | `1011` (`11`) &rarr; `1111` (`15`) | **Allocation:** Marks the first empty slot as busy. |
+| **Set Lowest Zero Bit** | `x \| (x + 1)` | `1011` (`11`) &rarr; `1111` (`15`) | **Allocation:** Marks the first empty slot as busy. |
 | **Isolate Lowest Zero Bit**| `~x & (x + 1)`| `1011` (`11`) &rarr; `0100` (`4`) | **Free List:** Finds the exact index of the first hole. |
 | **Isolate Least Significant 1** | `x ^ (x & (x - 1))` | `1010` &rarr; `0010` | *Alternative to `x & -x` if negation is unavailable.* |
 
@@ -25,8 +25,8 @@
 | :--- | :--- | :--- | :--- |
 | **Mask: LSB and Below** | `x ^ (x - 1)` | `0100` (`4`) &rarr; `0111` (`7`) | **Grant Logic:** Creates a mask covering the winner + lower bits. |
 | **Mask: Strictly Below LSB** | `~x & (x - 1)` | `0100` (`4`) &rarr; `0011` (`3`) | **Priority Mask:** Ignore current winner, enable only lower priorities. |
-| **Mask: Strictly Above LSB** | `~x | (x - 1)` *Then Invert* | `0100` (`4`) &rarr; `1000` (`8`) | *Complex to do in 1 step; usually `~(x ^ (x-1))`.* |
-| **Smear Right (Fill 1s)** | `x | (x >> 1) | (x >> 2)...` | `1000` &rarr; `1111` | **Valid Window:** Creates a mask from MSB down to bit 0. |
+| **Mask: Strictly Above LSB** | `~x \| (x - 1)` *Then Invert* | `0100` (`4`) &rarr; `1000` (`8`) | *Complex to do in 1 step; usually `~(x ^ (x-1))`.* |
+| **Smear Right (Fill 1s)** | `x \| (x >> 1) \| (x >> 2)...` | `1000` &rarr; `1111` | **Valid Window:** Creates a mask from MSB down to bit 0. |
 
 ---
 
