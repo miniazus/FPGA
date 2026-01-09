@@ -1,80 +1,65 @@
-# RTL & Firmware Bit Manipulation Master Cheat Sheet
+# RTL Bit Manipulation & Arithmetic Cheat Sheet
 
-**Sources:** *Hacker's Delight (Henry Warren)*, *Stanford Bit Twiddling Hacks*, and Standard Digital Design Patterns.
-**Notation:** `x` is the input vector. `^` is XOR. `&` is AND. `|` is OR. `~` is NOT. `-x` implies Two's Complement (`~x + 1`).
-
----
-
-### 1. Isolation & Search (Priority & Allocators)
-*Used to find the "First Winner" or "Next Empty Slot" without loops.*
-
-| Operation | Formula | Example (4-bit) | Hardware Application |
-| :--- | :--- | :--- | :--- |
-| **Isolate Lowest Set Bit (LSB)** | `x & (-x)` | `1010` → `0010` | **Priority Arbiter:** Finds the highest priority active user. |
-| **Isolate Lowest Zero (Hole)** | `~x & (x + 1)` | `1011` → `0100` | **Free List Allocator:** Finds the first empty memory slot. |
-| **Isolate Most Significant Bit** | *(Requires `clog2` or Smearing)* | `0110` → `0100` | **Reverse Priority:** Finding the highest index active. |
-| **Clear Lowest Set Bit** | `x & (x - 1)` | `1010` → `1000` | **Round Robin State:** Mark the current user as "Served". |
-| **Set Lowest Zero** | `x | (x + 1)` | `1011` → `1111` | **Allocation:** Mark the found empty slot as "Busy". |
+**Verified Against:** *Hacker's Delight* & *Stanford Bit Twiddling Hacks*.
+**Context:** `x` is the input vector. Operations assume 2's Complement arithmetic.
 
 ---
 
-### 2. Masking & Region Generation
-*Used to create "Thermometer Codes" or mask off lower/higher priority users.*
+### 1. Manipulating the Right-Most Bit (LSB)
+*These are the most common operations for Arbiters, Counters, and Linked Lists.*
 
-| Operation | Formula | Example (4-bit) | Hardware Application |
+| Operation | Formula | Trace Example (4-bit) | RTL Application |
 | :--- | :--- | :--- | :--- |
-| **Mask All Below LSB** | `x ^ (x - 1)` | `0100` → `0011` | **Mask Generation:** Ignore everyone lower than current winner. |
-| **Mask All Above LSB** | `~x & (x - 1)` | `0100` → `1000` | **Mask Generation:** Ignore everyone higher than current winner. |
-| **Flood Right (Propagate 1s)**| `x | (x - 1)` | `0100` → `0111` | **inclusive Mask:** Set all bits below and including the LSB. |
-| **Flood Right (Smearing)** | `x | (x>>1) | (x>>2)...` | `1000` → `1111` | **Thermometer Code:** Create a valid window starting from MSB. |
+| **Isolate Lowest Set Bit** | `x & (-x)` | `1010` (`10`) &rarr; `0010` (`2`) | **Priority Arbiter:** Finds the next user to serve. |
+| **Clear Lowest Set Bit** | `x & (x - 1)` | `1010` (`10`) &rarr; `1000` (`8`) | **Looping:** Removes the user just served. |
+| **Set Lowest Zero Bit** | `x | (x + 1)` | `1011` (`11`) &rarr; `1111` (`15`) | **Allocation:** Marks the first empty slot as busy. |
+| **Isolate Lowest Zero Bit**| `~x & (x + 1)`| `1011` (`11`) &rarr; `0100` (`4`) | **Free List:** Finds the exact index of the first hole. |
+| **Isolate Least Significant 1** | `x ^ (x & (x - 1))` | `1010` &rarr; `0010` | *Alternative to `x & -x` if negation is unavailable.* |
 
 ---
 
-### 3. Alignment & Modulo (Pointers & FIFOs)
-*Optimized math for buffer management (Assuming Power-of-2 sizes).*
+### 2. Mask Generation (Smearing)
+*Used to create "Thermometer Codes" or Priority Masks.*
 
-| Operation | Formula | Logic Description | Hardware Application |
+| Operation | Formula | Trace Example (4-bit) | RTL Application |
 | :--- | :--- | :--- | :--- |
-| **Modulo (Wrap Around)** | `x & (N - 1)` | Remainder of `x / N`. | **Circular Buffer:** Increment pointer `(ptr + 1) & 0xF`. |
-| **Round Down to Multiple**| `x & ~(N - 1)` | Truncate to N-byte boundary.| **Memory Alignment:** Align address to 16/32-byte page. |
-| **Round Up to Multiple** | `(x + N - 1) & ~(N - 1)` | Align to *next* N-byte boundary.| **DMA Transfer:** Ensure packet size matches bus width. |
-| **Binary to Gray Code** | `(x >> 1) ^ x` | minimize bit toggles. | **CDC FIFO:** Passing counters safely across clock domains. |
-| **Gray to Binary** | *Iterative XOR shift* | Restore binary value. | **CDC FIFO:** Decoding pointers in the destination domain. |
+| **Mask: LSB and Below** | `x ^ (x - 1)` | `0100` (`4`) &rarr; `0111` (`7`) | **Grant Logic:** Creates a mask covering the winner + lower bits. |
+| **Mask: Strictly Below LSB** | `~x & (x - 1)` | `0100` (`4`) &rarr; `0011` (`3`) | **Priority Mask:** Ignore current winner, enable only lower priorities. |
+| **Mask: Strictly Above LSB** | `~x | (x - 1)` *Then Invert* | `0100` (`4`) &rarr; `1000` (`8`) | *Complex to do in 1 step; usually `~(x ^ (x-1))`.* |
+| **Smear Right (Fill 1s)** | `x | (x >> 1) | (x >> 2)...` | `1000` &rarr; `1111` | **Valid Window:** Creates a mask from MSB down to bit 0. |
 
 ---
 
-### 4. Boolean Checks (Assertions & Logic)
-*Fast checks for validity, often used in `assert` or Status Registers.*
+### 3. Boolean Properties (Checks)
+*Return 1 (True) or 0 (False). Essential for `assert` and Status Flags.*
 
-| Operation | Formula | Returns True If... | Hardware Application |
+| Property | Formula | Trace Example | RTL Application |
 | :--- | :--- | :--- | :--- |
-| **Is Power of 2** | `(x & (x - 1)) == 0` | Exactly one '1' is set. | **FIFO Depth Check:** Verifies buffer size is safe for binary masking. |
-| **Is Power of 2 (or 0)** | `(x & (x - 1)) == 0` | 0 or 1 bit set. | **One-Hot Check:** Ensure only one master is granting. |
-| **Has Single Zero** | `((x + 1) & x) == 0` | Exactly one '0' is set. | **Link Status:** Check if only one channel is down. |
-| **Is All Ones** | `x == '1` | All bits are high. | **Full Flag:** Buffer is 100% full. |
-| **Is All Zeros** | `x == '0` | All bits are low. | **Empty Flag:** Buffer is 100% empty. |
-| **Detect Any Change** | `(val ^ old_val) != 0` | Value changed. | **Interrupt Gen:** Trigger on any register change. |
+| **Is Power of 2** | `(x & (x - 1)) == 0` | `1000` &rarr; True<br>`1100` &rarr; False | **FIFO Depth:** Verifies buffer size is safe for wrapping. |
+| **Is Power of 2 or Zero** | `(x & (x - 1)) == 0` | `0000` &rarr; True | **One-Hot Check:** Ensures only 0 or 1 master is active. |
+| **Has Exactly One Zero** | `((x + 1) & x) == 0` | `1101` &rarr; True | **Link Check:** Verifies only one channel is disconnected. |
+| **Are Adjacent Bits Set?** | `(x & (x << 1)) != 0` | `0011` &rarr; True | **Pattern Detect:** Finds consecutive active requests. |
 
 ---
 
-### 5. Advanced Tricks (Data Swapping)
-*Manipulation without temporary variables.*
+### 4. Pointers & Alignment (Modulo Math)
+*Optimized math for Power-of-2 buffer sizes (`N`).*
 
-| Operation | Formula | Description | Hardware Application |
+| Operation | Formula | Example (`N=16`) | RTL Application |
 | :--- | :--- | :--- | :--- |
-| **Toggle Specific Bit** | `x ^ (1 << N)` | Flip bit N. | **Heartbeat:** Blink an LED or toggle a "Keep-Alive" bit. |
-| **Check Specific Bit** | `(x >> N) & 1` | Read bit N. | **Muxing:** Extract specific flag from status register. |
-| **Swap Values (XOR Swap)**| `a^=b; b^=a; a^=b;` | Swap `a` and `b`. | **Sorting Network:** Swap elements without temp storage. |
-| **Conditional Negate** | `(x ^ -flag) + flag` | Negate `x` if `flag` is 1. | **DSP:** Absolute value calculation without branching. |
+| **Modulo (Wrap)** | `x & (N - 1)` | `19 & 15` &rarr; `3` | **Circular Buffer:** Cheap division for ring buffers. |
+| **Round Down** | `x & ~(N - 1)` | `19 & ~15` &rarr; `16` | **Align Address:** Truncate address to page boundary. |
+| **Round Up** | `(x + N - 1) & ~(N - 1)` | `19` &rarr; `32` | **DMA Size:** Pad data length to match bus width. |
+| **Binary to Gray** | `(x >> 1) ^ x` | `0011` &rarr; `0010` | **CDC:** Safe counter passing across clock domains. |
 
 ---
 
-### 6. SystemVerilog Specifics (Built-in Optimizations)
-*Don't use C-hacks if the language supports it natively.*
+### 5. Advanced Tricks (No Branching)
+*Optimization to avoid `if/else` logic.*
 
-| Operation | C-Style Hack | SystemVerilog Native | Why use Native? |
+| Operation | Formula | Description | RTL Application |
 | :--- | :--- | :--- | :--- |
-| **Count Ones** | `Loop { x &= (x-1) }` | `$countones(x)` | Infers optimized Adder Tree. |
-| **Leading Zeros** | *De Bruijn Sequence* | `$clog2(x)` | Runs at compile time (if constant). |
-| **Find First Set** | `x & -x` | `$countbits(x, 1)` | More readable (though `& -x` is fine). |
-| **Parity Calculation** | `x ^ (x>>1) ...` | `^x` (Reduction XOR) | Standard, readable syntax. |
+| **Conditional Negate** | `(x ^ -flag) + flag` | If `flag=1`, returns `-x`. | **DSP:** Absolute value logic without Mux. |
+| **XOR Swap** | `a^=b; b^=a; a^=b` | Swaps A and B. | **Sorting:** Swap registers without temp storage. |
+| **Toggle Bit `k`** | `x ^ (1 << k)` | Inverts bit at index `k`. | **Heartbeat:** Toggles a status LED/Bit. |
+| **Detect Any Change** | `(new ^ old) != 0` | 1 if value changed. | **Wakeup:** Trigger interrupt on any register change. |
